@@ -1,0 +1,68 @@
+// Main App Component
+// Routes and global providers with RTL support
+
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { ThemeProvider } from '@mui/material/styles'
+import { CacheProvider } from '@emotion/react'
+import CssBaseline from '@mui/material/CssBaseline'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
+// Theme
+import rtlTheme from './theme/rtlTheme'
+import cacheRtl from './theme/rtlCache'
+
+// Context
+import { AuthProvider } from './contexts/AuthContext'
+
+// Components
+import ProtectedRoute from './components/ProtectedRoute'
+
+// Pages
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+
+function App() {
+  return (
+    <CacheProvider value={cacheRtl}>
+      <ThemeProvider theme={rtlTheme}>
+        <CssBaseline />
+        <AuthProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Default Route */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Router>
+        </AuthProvider>
+
+        {/* Toast Notifications */}
+        <ToastContainer
+          position="top-left"
+          autoClose={3000}
+          hideProgressBar={false}
+          rtl={true}
+          closeOnClick
+          pauseOnHover
+        />
+      </ThemeProvider>
+    </CacheProvider>
+  )
+}
+
+export default App
