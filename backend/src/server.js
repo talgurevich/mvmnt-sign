@@ -105,7 +105,7 @@ app.get('/health', (req, res) => {
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/form-templates', require('./routes/formTemplateRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
-// app.use('/api/form-requests', requireAuth, require('./routes/formRequests'));
+app.use('/api/form-requests', require('./routes/formRequestRoutes'));
 
 // Public signing routes (token-based authentication)
 // app.use('/sign', signingLimiter, require('./routes/signing'));
