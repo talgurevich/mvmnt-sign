@@ -23,6 +23,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
+import Forms from './pages/Forms'
 
 function App() {
   return (
@@ -49,6 +50,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Customers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/forms"
+                element={
+                  <ProtectedRoute>
+                    <Forms />
                   </ProtectedRoute>
                 }
               />
