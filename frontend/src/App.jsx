@@ -24,6 +24,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
 import Forms from './pages/Forms'
+import SendDocument from './pages/SendDocument'
 
 function App() {
   return (
@@ -58,6 +59,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Forms />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/send-document"
+                element={
+                  <ProtectedRoute>
+                    <SendDocument />
                   </ProtectedRoute>
                 }
               />
