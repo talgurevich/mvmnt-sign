@@ -45,9 +45,9 @@ const Layout = ({ children }) => {
 
   const menuItems = [
     { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'שלח מסמך', icon: <SendIcon />, path: '/send-document' },
     { text: 'לקוחות', icon: <PeopleIcon />, path: '/customers' },
-    { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' },
-    { text: 'מסמכים שנשלחו', icon: <SendIcon />, path: '/sent-documents' }
+    { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' }
   ]
 
   const drawer = (
