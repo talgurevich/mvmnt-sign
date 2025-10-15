@@ -102,7 +102,7 @@ app.get('/health', (req, res) => {
 // app.use('/auth', require('./routes/auth'));
 
 // Admin routes (require authentication)
-// app.use('/api/customers', requireAuth, require('./routes/customers'));
+app.use('/api/customers', require('./routes/customers'));
 // app.use('/api/templates', requireAuth, require('./routes/templates'));
 // app.use('/api/form-requests', requireAuth, require('./routes/formRequests'));
 // app.use('/api/dashboard', requireAuth, require('./routes/dashboard'));
