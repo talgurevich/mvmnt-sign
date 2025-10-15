@@ -1,0 +1,30 @@
+/* Global Styles - Hebrew/RTL */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Heebo', 'Roboto', 'Arial', sans-serif;
+  direction: rtl;
+  text-align: right;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Toast Container RTL Adjustments */
+.Toastify__toast-container {
+  right: auto !important;
+  left: 1em !important;
+}
+
+.Toastify__toast--rtl {
+  direction: rtl;
+  text-align: right;
+}
