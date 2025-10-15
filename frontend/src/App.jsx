@@ -22,6 +22,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Pages
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Customers from './pages/Customers'
 
 function App() {
   return (
@@ -40,6 +41,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customers"
+                element={
+                  <ProtectedRoute>
+                    <Customers />
                   </ProtectedRoute>
                 }
               />

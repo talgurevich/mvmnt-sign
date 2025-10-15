@@ -9,46 +9,22 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
-  AppBar,
-  Toolbar,
-  IconButton
+  Grid
 } from '@mui/material'
-import LogoutIcon from '@mui/icons-material/Logout'
 import PeopleIcon from '@mui/icons-material/People'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import Layout from '../components/Layout'
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      {/* App Bar */}
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            מערכת חתימה דיגיטלית - Arbox
-          </Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>
-            {user?.email}
-          </Typography>
-          <IconButton color="inherit" onClick={handleSignOut}>
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      {/* Main Content */}
-      <Container sx={{ mt: 4, mb: 4 }}>
+    <Layout>
+      <Container maxWidth="xl">
         <Typography variant="h4" gutterBottom fontWeight="bold">
           ברוך הבא, {user?.user_metadata?.full_name || user?.email}
         </Typography>
@@ -108,8 +84,12 @@ const Dashboard = () => {
           </Typography>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item>
-              <Button variant="contained" size="large">
-                הוסף לקוח חדש
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => navigate('/customers')}
+              >
+                נהל לקוחות
               </Button>
             </Grid>
             <Grid item>
@@ -137,7 +117,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </Container>
-    </Box>
+    </Layout>
   )
 }
 
