@@ -40,8 +40,8 @@ router.get('/:id', formTemplateController.getFormTemplateById)
 // GET /api/form-templates/:id/stats - Get form template statistics
 router.get('/:id/stats', formTemplateController.getFormTemplateStats)
 
-// POST /api/form-templates - Create new form template (with file upload)
-router.post('/', upload.single('file'), formTemplateController.createFormTemplate)
+// POST /api/form-templates - Create new form template (text-only)
+router.post('/', formTemplateController.createFormTemplate)
 
 // PUT /api/form-templates/:id - Update form template
 router.put('/:id', formTemplateController.updateFormTemplate)

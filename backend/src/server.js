@@ -107,8 +107,11 @@ app.use('/api/form-templates', require('./routes/formTemplateRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/form-requests', require('./routes/formRequestRoutes'));
 
-// Public signing routes (token-based authentication)
-// app.use('/sign', signingLimiter, require('./routes/signing'));
+// Public signing routes (no authentication required)
+app.use('/api/sign', require('./routes/signingRoutes'));
+
+// Migration routes (temporary - can be removed after migrations complete)
+app.use('/api/migrations', require('./routes/migrationRoutes'));
 
 // Placeholder route for testing
 app.get('/api/test', (req, res) => {

@@ -71,41 +71,38 @@ exports.getFormTemplateById = catchAsync(async (req, res) => {
   res.json(data)
 })
 
-// Upload and create form template
+// Create form template (text-only, no file upload)
 exports.createFormTemplate = catchAsync(async (req, res) => {
-  if (!req.file) {
-    throw new AppError('לא הועלה קובץ', 400)
-  }
-
-  const { template_name, description } = req.body
+  const { template_name, description, text_content } = req.body
 
   if (!template_name) {
     throw new AppError('שם תבנית הוא שדה חובה', 400)
   }
 
-  // Process document (upload and convert if needed)
-  const processedDoc = await documentService.processDocument(req.file)
+  if (!text_content) {
+    throw new AppError('תוכן המסמך הוא שדה חובה', 400)
+  }
 
-  // Create form template record
+  // Create form template record with text content only
   const { data, error } = await supabaseAdmin
     .from('form_templates')
     .insert({
       template_name,
       description: description || null,
-      file_path: processedDoc.pdfPath,
-      file_url: processedDoc.pdfUrl,
-      original_filename: processedDoc.originalName,
-      page_count: processedDoc.pageCount,
-      file_size: processedDoc.fileSize,
+      text_content,
       signature_positions: [], // Empty array, will be configured later
-      is_active: true
+      is_active: true,
+      // Set file-related fields to null
+      file_path: null,
+      file_url: null,
+      original_filename: null,
+      page_count: 1, // Text documents count as 1 page
+      file_size: text_content.length
     })
     .select()
     .single()
 
   if (error) {
-    // If DB insert fails, delete uploaded file
-    await documentService.deleteFromStorage(processedDoc.pdfPath).catch(() => {})
     console.error('Error creating form template:', error)
     throw new AppError('שגיאה ביצירת תבנית', 500)
   }
@@ -118,7 +115,7 @@ exports.createFormTemplate = catchAsync(async (req, res) => {
     entity_id: data.id,
     details: {
       template_name: data.template_name,
-      page_count: data.page_count
+      content_length: text_content.length
     }
   })
 
@@ -157,6 +154,10 @@ exports.updateFormTemplate = catchAsync(async (req, res) => {
 
   if (template_name !== undefined) updates.template_name = template_name
   if (description !== undefined) updates.description = description
+  if (req.body.text_content !== undefined) {
+    updates.text_content = req.body.text_content
+    updates.file_size = req.body.text_content.length
+  }
   if (signature_positions !== undefined) {
     // Validate signature positions format
     if (!Array.isArray(signature_positions)) {
@@ -212,18 +213,7 @@ exports.deleteFormTemplate = catchAsync(async (req, res) => {
     throw new AppError('תבנית לא נמצאה', 404)
   }
 
-  // Check if template is in use
-  const { data: inUse, error: useError } = await supabaseAdmin
-    .from('form_requests')
-    .select('id')
-    .eq('form_template_id', id)
-    .limit(1)
-
-  if (!useError && inUse && inUse.length > 0) {
-    throw new AppError('לא ניתן למחוק תבנית שכבר נשלחה ללקוחות', 400)
-  }
-
-  // Soft delete
+  // Soft delete (allowing deletion even if template is in use)
   const { error } = await supabaseAdmin
     .from('form_templates')
     .update({ deleted_at: new Date().toISOString() })
