@@ -1,5 +1,5 @@
 // Form Templates Management Page
-// Upload and manage document templates (Hebrew)
+// Create and manage document templates with rich text editor (Hebrew)
 
 import React, { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
@@ -29,27 +29,35 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tooltip,
-  Card,
-  CardContent,
-  Grid
+  Tooltip
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import DescriptionIcon from '@mui/icons-material/Description'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 
 const API_URL = import.meta.env.VITE_API_URL
 
+// Quill editor modules configuration
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'align': [] }],
+    ['clean']
+  ]
+}
+
 const Forms = () => {
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -60,11 +68,11 @@ const Forms = () => {
   const [openDialog, setOpenDialog] = useState(false)
   const [dialogMode, setDialogMode] = useState('create') // 'create', 'edit', 'view'
   const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [uploadFile, setUploadFile] = useState(null)
-  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     template_name: '',
     description: '',
+    content: '',
     is_active: true
   })
 
@@ -72,8 +80,7 @@ const Forms = () => {
   const fetchTemplates = async () => {
     try {
       setLoading(true)
-      const session = await user.getSession()
-      const token = session?.access_token
+      const token = await getAccessToken()
 
       const params = new URLSearchParams({
         page: page + 1,
@@ -96,81 +103,49 @@ const Forms = () => {
     }
   }
 
-  // Handle file selection
-  const handleFileChange = (event) => {
-    const file = event.target.files[0]
-    if (file) {
-      // Validate file type
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ]
-
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('סוג קובץ לא נתמך. אנא העלה PDF, DOC או DOCX')
-        return
-      }
-
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('הקובץ גדול מדי. מקסימום 10MB')
-        return
-      }
-
-      setUploadFile(file)
-    }
-  }
-
-  // Upload and create template
-  const handleUpload = async () => {
-    if (!uploadFile || !formData.template_name) {
-      toast.error('נא למלא שם תבנית ולבחור קובץ')
+  // Create template
+  const handleCreate = async () => {
+    if (!formData.template_name || !formData.content) {
+      toast.error('נא למלא שם תבנית ותוכן')
       return
     }
 
     try {
-      setUploading(true)
-      const session = await user.getSession()
-      const token = session?.access_token
+      setSaving(true)
+      const token = await getAccessToken()
 
-      const formDataToSend = new FormData()
-      formDataToSend.append('file', uploadFile)
-      formDataToSend.append('template_name', formData.template_name)
-      if (formData.description) {
-        formDataToSend.append('description', formData.description)
-      }
-
-      await axios.post(`${API_URL}/api/form-templates`, formDataToSend, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+      await axios.post(`${API_URL}/api/form-templates`, {
+        template_name: formData.template_name,
+        description: formData.description,
+        text_content: formData.content
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       })
 
-      toast.success('תבנית הועלתה בהצלחה')
+      toast.success('תבנית נוצרה בהצלחה')
       setOpenDialog(false)
       fetchTemplates()
       resetForm()
     } catch (error) {
-      console.error('Error uploading template:', error)
-      toast.error(error.response?.data?.message || 'שגיאה בהעלאת תבנית')
+      console.error('Error creating template:', error)
+      toast.error(error.response?.data?.message || 'שגיאה ביצירת תבנית')
     } finally {
-      setUploading(false)
+      setSaving(false)
     }
   }
 
   // Update template
   const handleUpdate = async () => {
     try {
-      const session = await user.getSession()
-      const token = session?.access_token
+      setSaving(true)
+      const token = await getAccessToken()
 
       await axios.put(
         `${API_URL}/api/form-templates/${selectedTemplate.id}`,
         {
           template_name: formData.template_name,
           description: formData.description,
+          text_content: formData.content,
           is_active: formData.is_active
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -183,6 +158,8 @@ const Forms = () => {
     } catch (error) {
       console.error('Error updating template:', error)
       toast.error('שגיאה בעדכון תבנית')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -191,8 +168,7 @@ const Forms = () => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק תבנית זו?')) return
 
     try {
-      const session = await user.getSession()
-      const token = session?.access_token
+      const token = await getAccessToken()
 
       await axios.delete(`${API_URL}/api/form-templates/${templateId}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -219,6 +195,7 @@ const Forms = () => {
     setFormData({
       template_name: template.template_name,
       description: template.description || '',
+      content: template.text_content || '',
       is_active: template.is_active
     })
     setOpenDialog(true)
@@ -234,9 +211,9 @@ const Forms = () => {
     setFormData({
       template_name: '',
       description: '',
+      content: '',
       is_active: true
     })
-    setUploadFile(null)
     setSelectedTemplate(null)
   }
 
@@ -244,13 +221,6 @@ const Forms = () => {
   useEffect(() => {
     fetchTemplates()
   }, [page, rowsPerPage, searchTerm, statusFilter])
-
-  // Format file size
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B'
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-  }
 
   return (
     <Layout>
@@ -308,12 +278,12 @@ const Forms = () => {
             </Box>
           ) : templates.length === 0 ? (
             <Box sx={{ p: 4, textAlign: 'center' }}>
-              <UploadFileIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+              <DescriptionIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary">
                 לא נמצאו תבניות
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                העלה תבנית ראשונה כדי להתחיל
+                צור תבנית ראשונה כדי להתחיל
               </Typography>
             </Box>
           ) : (
@@ -324,9 +294,6 @@ const Forms = () => {
                     <TableRow>
                       <TableCell>שם תבנית</TableCell>
                       <TableCell>תיאור</TableCell>
-                      <TableCell align="center">סוג קובץ</TableCell>
-                      <TableCell align="center">מספר עמודים</TableCell>
-                      <TableCell align="center">גודל קובץ</TableCell>
                       <TableCell align="center">סטטוס</TableCell>
                       <TableCell align="center">תאריך יצירה</TableCell>
                       <TableCell align="center">פעולות</TableCell>
@@ -337,18 +304,11 @@ const Forms = () => {
                       <TableRow key={template.id} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <PictureAsPdfIcon color="error" />
+                            <DescriptionIcon color="primary" />
                             {template.template_name}
                           </Box>
                         </TableCell>
                         <TableCell>{template.description || '-'}</TableCell>
-                        <TableCell align="center">
-                          <Chip label="PDF" size="small" color="error" />
-                        </TableCell>
-                        <TableCell align="center">{template.page_count}</TableCell>
-                        <TableCell align="center">
-                          {formatFileSize(template.file_size)}
-                        </TableCell>
                         <TableCell align="center">
                           <Chip
                             label={template.is_active ? 'פעיל' : 'לא פעיל'}
@@ -403,7 +363,12 @@ const Forms = () => {
         </Paper>
 
         {/* Create/Edit Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={openDialog}
+          onClose={() => setOpenDialog(false)}
+          maxWidth="md"
+          fullWidth
+        >
           <DialogTitle>
             {dialogMode === 'create' && 'הוסף תבנית חדשה'}
             {dialogMode === 'edit' && 'ערוך תבנית'}
@@ -428,45 +393,28 @@ const Forms = () => {
                 </Typography>
 
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  קובץ מקורי
+                  תוכן המסמך
                 </Typography>
-                <Typography variant="body1" paragraph>
-                  {selectedTemplate?.original_filename}
-                </Typography>
+                <Paper
+                  sx={{
+                    p: 3,
+                    mt: 1,
+                    bgcolor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.300'
+                  }}
+                >
+                  <div dangerouslySetInnerHTML={{ __html: selectedTemplate?.text_content || 'אין תוכן' }} />
+                </Paper>
 
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  מספר עמודים
-                </Typography>
-                <Typography variant="body1" paragraph>
-                  {selectedTemplate?.page_count}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  גודל קובץ
-                </Typography>
-                <Typography variant="body1" paragraph>
-                  {formatFileSize(selectedTemplate?.file_size || 0)}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
                   סטטוס
                 </Typography>
                 <Chip
                   label={selectedTemplate?.is_active ? 'פעיל' : 'לא פעיל'}
                   color={selectedTemplate?.is_active ? 'success' : 'default'}
                   size="small"
-                  sx={{ mb: 2 }}
                 />
-
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  href={selectedTemplate?.file_url}
-                  target="_blank"
-                  sx={{ mt: 2 }}
-                >
-                  פתח PDF
-                </Button>
               </Box>
             ) : (
               // Create/Edit mode
@@ -484,35 +432,32 @@ const Forms = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   fullWidth
                   multiline
-                  rows={3}
+                  rows={2}
                 />
 
-                {dialogMode === 'create' && (
-                  <Box>
-                    <input
-                      accept=".pdf,.doc,.docx"
-                      style={{ display: 'none' }}
-                      id="file-upload"
-                      type="file"
-                      onChange={handleFileChange}
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    תוכן המסמך *
+                  </Typography>
+                  <Box sx={{
+                    '& .quill': {
+                      bgcolor: 'white',
+                      borderRadius: 1
+                    },
+                    '& .ql-container': {
+                      minHeight: '300px',
+                      fontSize: '16px'
+                    }
+                  }}>
+                    <ReactQuill
+                      theme="snow"
+                      value={formData.content}
+                      onChange={(value) => setFormData({ ...formData, content: value })}
+                      modules={quillModules}
+                      placeholder="הכנס את תוכן המסמך כאן..."
                     />
-                    <label htmlFor="file-upload">
-                      <Button
-                        variant="outlined"
-                        component="span"
-                        startIcon={<UploadFileIcon />}
-                        fullWidth
-                      >
-                        {uploadFile ? uploadFile.name : 'בחר קובץ (PDF, DOC, DOCX)'}
-                      </Button>
-                    </label>
-                    {uploadFile && (
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                        גודל: {formatFileSize(uploadFile.size)}
-                      </Typography>
-                    )}
                   </Box>
-                )}
+                </Box>
 
                 {dialogMode === 'edit' && (
                   <FormControl fullWidth>
@@ -536,20 +481,20 @@ const Forms = () => {
             </Button>
             {dialogMode === 'create' && (
               <Button
-                onClick={handleUpload}
+                onClick={handleCreate}
                 variant="contained"
-                disabled={!formData.template_name || !uploadFile || uploading}
+                disabled={!formData.template_name || !formData.content || saving}
               >
-                {uploading ? <CircularProgress size={24} /> : 'העלה'}
+                {saving ? <CircularProgress size={24} /> : 'צור'}
               </Button>
             )}
             {dialogMode === 'edit' && (
               <Button
                 onClick={handleUpdate}
                 variant="contained"
-                disabled={!formData.template_name}
+                disabled={!formData.template_name || !formData.content || saving}
               >
-                שמור
+                {saving ? <CircularProgress size={24} /> : 'שמור'}
               </Button>
             )}
           </DialogActions>
