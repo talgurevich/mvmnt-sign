@@ -10,12 +10,21 @@ import {
   Card,
   CardContent,
   Grid,
-  CircularProgress
+  CircularProgress,
+  Chip,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider
 } from '@mui/material'
 import PeopleIcon from '@mui/icons-material/People'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import SendIcon from '@mui/icons-material/Send'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
@@ -24,17 +33,19 @@ import axios from 'axios'
 const API_URL = import.meta.env.VITE_API_URL
 
 const Dashboard = () => {
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
+  const [recentRequests, setRecentRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingRequests, setLoadingRequests] = useState(true)
 
   // Fetch dashboard statistics
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const session = await user.getSession()
-        const token = session?.access_token
+        const token = await getAccessToken()
+
 
         const response = await axios.get(`${API_URL}/api/dashboard/stats`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -48,7 +59,22 @@ const Dashboard = () => {
       }
     }
 
+    const fetchRecentRequests = async () => {
+      try {
+        const token = await getAccessToken()
+        const response = await axios.get(`${API_URL}/api/dashboard/recent-requests?limit=10`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        setRecentRequests(response.data.data || [])
+      } catch (error) {
+        console.error('Error fetching recent requests:', error)
+      } finally {
+        setLoadingRequests(false)
+      }
+    }
+
     fetchStats()
+    fetchRecentRequests()
   }, [])
 
   return (
@@ -166,6 +192,102 @@ const Dashboard = () => {
             </Grid>
           </>
         )}
+
+        {/* Recent Activity */}
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" gutterBottom fontWeight="bold">
+            פעילות אחרונה
+          </Typography>
+          <Card sx={{ mt: 2 }}>
+            <CardContent>
+              {loadingRequests ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress />
+                </Box>
+              ) : recentRequests.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                  אין פעילות אחרונה
+                </Typography>
+              ) : (
+                <List>
+                  {recentRequests.map((request, index) => {
+                    const statusColors = {
+                      created: 'default',
+                      sent: 'info',
+                      opened: 'warning',
+                      signed: 'success',
+                      declined: 'error',
+                      expired: 'error'
+                    }
+
+                    const statusLabels = {
+                      created: 'נוצר',
+                      sent: 'נשלח',
+                      opened: 'נפתח',
+                      signed: 'נחתם',
+                      declined: 'נדחה',
+                      expired: 'פג תוקף'
+                    }
+
+                    const statusIcons = {
+                      created: <DescriptionIcon />,
+                      sent: <SendIcon />,
+                      opened: <VisibilityIcon />,
+                      signed: <CheckCircleIcon />,
+                      declined: <DescriptionIcon />,
+                      expired: <DescriptionIcon />
+                    }
+
+                    return (
+                      <React.Fragment key={request.id}>
+                        {index > 0 && <Divider />}
+                        <ListItem
+                          button
+                          onClick={() => navigate('/customers')}
+                          sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                        >
+                          <ListItemIcon>
+                            {statusIcons[request.status]}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body1">
+                                  {request.customer?.first_name} {request.customer?.last_name}
+                                </Typography>
+                                <Chip
+                                  label={statusLabels[request.status]}
+                                  color={statusColors[request.status]}
+                                  size="small"
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <>
+                                <Typography variant="body2" color="text.secondary">
+                                  {request.template?.template_name || 'מסמך'}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(request.created_at).toLocaleDateString('he-IL', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </Typography>
+                              </>
+                            }
+                          />
+                        </ListItem>
+                      </React.Fragment>
+                    )
+                  })}
+                </List>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
 
         {/* Quick Actions */}
         <Box sx={{ mt: 4 }}>

@@ -25,6 +25,7 @@ import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
 import Forms from './pages/Forms'
 import SendDocument from './pages/SendDocument'
+import SignDocument from './pages/SignDocument'
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/sign/:token" element={<SignDocument />} />
 
               {/* Protected Routes */}
               <Route
