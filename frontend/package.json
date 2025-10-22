@@ -1,6 +1,6 @@
 {
   "name": "arbox-whatsapp-signing-frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Frontend for Arbox-WhatsApp Form Signing Service (Hebrew/RTL)",
   "type": "module",
   "scripts": {
