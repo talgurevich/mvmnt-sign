@@ -39,14 +39,18 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SyncIcon from '@mui/icons-material/Sync'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import DownloadIcon from '@mui/icons-material/Download'
+import DescriptionIcon from '@mui/icons-material/Description'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL
 
 const Customers = () => {
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
+  const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -58,6 +62,8 @@ const Customers = () => {
   const [openDialog, setOpenDialog] = useState(false)
   const [dialogMode, setDialogMode] = useState('create') // 'create', 'edit', 'view'
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [signedDocuments, setSignedDocuments] = useState([])
+  const [loadingDocuments, setLoadingDocuments] = useState(false)
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -70,7 +76,7 @@ const Customers = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true)
-      const token = (await user.getSession())?.access_token
+      const token = await getAccessToken()
 
       const params = new URLSearchParams({
         page: page + 1,
@@ -97,7 +103,7 @@ const Customers = () => {
   const handleSync = async () => {
     try {
       setSyncing(true)
-      const token = (await user.getSession())?.access_token
+      const token = await getAccessToken()
 
       const response = await axios.post(
         `${API_URL}/api/customers/sync-from-arbox`,
@@ -105,7 +111,8 @@ const Customers = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      toast.success(`סונכרנו ${response.data.synced} לקוחות מ-Arbox`)
+      // Use the message from backend which includes created and updated counts
+      toast.success(response.data.message || 'סנכרון הושלם בהצלחה')
       fetchCustomers()
     } catch (error) {
       console.error('Error syncing customers:', error)
@@ -118,7 +125,7 @@ const Customers = () => {
   // Create or update customer
   const handleSave = async () => {
     try {
-      const token = (await user.getSession())?.access_token
+      const token = await getAccessToken()
 
       if (dialogMode === 'create') {
         await axios.post(`${API_URL}/api/customers`, formData, {
@@ -146,7 +153,7 @@ const Customers = () => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק לקוח זה?')) return
 
     try {
-      const token = (await user.getSession())?.access_token
+      const token = await getAccessToken()
       await axios.delete(`${API_URL}/api/customers/${customerId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -155,6 +162,49 @@ const Customers = () => {
     } catch (error) {
       console.error('Error deleting customer:', error)
       toast.error('שגיאה במחיקת לקוח')
+    }
+  }
+
+  // Fetch signed documents for a customer
+  const fetchSignedDocuments = async (customerId) => {
+    try {
+      setLoadingDocuments(true)
+      const token = await getAccessToken()
+      const response = await axios.get(`${API_URL}/api/customers/${customerId}/signed-documents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setSignedDocuments(response.data.data || [])
+    } catch (error) {
+      console.error('Error fetching signed documents:', error)
+      toast.error('שגיאה בטעינת מסמכים חתומים')
+      setSignedDocuments([])
+    } finally {
+      setLoadingDocuments(false)
+    }
+  }
+
+  // Download signed document
+  const handleDownloadDocument = async (customerId, documentId) => {
+    try {
+      const token = await getAccessToken()
+      const response = await axios.get(
+        `${API_URL}/api/customers/${customerId}/signed-documents/${documentId}/download`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      )
+
+      // Create a blob URL and open in new tab
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+
+      // Clean up the blob URL after a short delay
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      toast.error('שגיאה בהורדת המסמך')
     }
   }
 
@@ -182,6 +232,8 @@ const Customers = () => {
     setDialogMode('view')
     setSelectedCustomer(customer)
     setOpenDialog(true)
+    // Fetch signed documents when opening view dialog
+    fetchSignedDocuments(customer.id)
   }
 
   const resetForm = () => {
@@ -426,6 +478,68 @@ const Customers = () => {
                   </Typography>
                 </>
               )}
+
+              {/* Signed Documents Section */}
+              <Box sx={{ mt: 3, borderTop: '1px solid #ddd', pt: 2 }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  מסמכים חתומים
+                </Typography>
+
+                {loadingDocuments ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <CircularProgress size={30} />
+                  </Box>
+                ) : signedDocuments.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                    אין מסמכים חתומים
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {signedDocuments.map((doc) => (
+                      <Paper
+                        key={doc.id}
+                        elevation={2}
+                        sx={{
+                          p: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          '&:hover': { bgcolor: 'action.hover' }
+                        }}
+                      >
+                        <DescriptionIcon color="primary" sx={{ fontSize: 40 }} />
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="body1" fontWeight="bold">
+                            {doc.template_name}
+                          </Typography>
+                          {doc.template_description && (
+                            <Typography variant="body2" color="text.secondary">
+                              {doc.template_description}
+                            </Typography>
+                          )}
+                          <Typography variant="caption" color="text.secondary">
+                            נחתם ב: {new Date(doc.signed_at).toLocaleDateString('he-IL', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </Typography>
+                        </Box>
+                        <Tooltip title="הורד מסמך">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleDownloadDocument(selectedCustomer.id, doc.id)}
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Paper>
+                    ))}
+                  </Box>
+                )}
+              </Box>
             </Box>
           ) : (
             // Create/Edit mode - show form
@@ -477,6 +591,18 @@ const Customers = () => {
           <Button onClick={() => setOpenDialog(false)}>
             {dialogMode === 'view' ? 'סגור' : 'ביטול'}
           </Button>
+          {dialogMode === 'view' && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                setOpenDialog(false)
+                navigate('/send-document', { state: { selectedCustomer } })
+              }}
+            >
+              שלח מסמך
+            </Button>
+          )}
           {dialogMode !== 'view' && (
             <Button
               onClick={handleSave}

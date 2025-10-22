@@ -1,4 +1,4 @@
-// Send Document Page
+// Send Document Page - Simplified
 // Interface for sending forms to customers via WhatsApp (Hebrew)
 
 import React, { useState, useEffect } from 'react'
@@ -9,66 +9,53 @@ import {
   Typography,
   Button,
   Paper,
-  TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Autocomplete,
+  TextField,
   CircularProgress,
   Card,
   CardContent,
-  Alert,
-  Stepper,
-  Step,
-  StepLabel,
-  Grid,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Grid
 } from '@mui/material'
-import SendIcon from '@mui/icons-material/Send'
 import WhatsAppIcon from '@mui/icons-material/WhatsApp'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import { toast } from 'react-toastify'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
+import { useLocation } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL
 
-const steps = ['בחר לקוח', 'בחר תבנית', 'שלח מסמך']
-
 const SendDocument = () => {
-  const { user } = useAuth()
-  const [activeStep, setActiveStep] = useState(0)
+  const { getAccessToken } = useAuth()
+  const location = useLocation()
   const [customers, setCustomers] = useState([])
   const [templates, setTemplates] = useState([])
   const [selectedCustomer, setSelectedCustomer] = useState(null)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [expiryDays, setExpiryDays] = useState(30)
-  const [customMessage, setCustomMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [showResultDialog, setShowResultDialog] = useState(false)
 
   // Fetch customers and templates on mount
   useEffect(() => {
     fetchCustomers()
     fetchTemplates()
+
+    // Pre-select customer if passed from navigation
+    if (location.state?.selectedCustomer) {
+      setSelectedCustomer(location.state.selectedCustomer)
+    }
   }, [])
 
   const fetchCustomers = async () => {
     try {
-      const session = await user.getSession()
-      const token = session?.access_token
-
+      const token = await getAccessToken()
       const response = await axios.get(`${API_URL}/api/customers?limit=1000&is_active=true`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-
       setCustomers(response.data.data)
     } catch (error) {
       console.error('Error fetching customers:', error)
@@ -78,13 +65,10 @@ const SendDocument = () => {
 
   const fetchTemplates = async () => {
     try {
-      const session = await user.getSession()
-      const token = session?.access_token
-
+      const token = await getAccessToken()
       const response = await axios.get(`${API_URL}/api/form-templates?limit=1000&is_active=true`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-
       setTemplates(response.data.data)
     } catch (error) {
       console.error('Error fetching templates:', error)
@@ -92,99 +76,98 @@ const SendDocument = () => {
     }
   }
 
-  const handleNext = () => {
-    if (activeStep === 0 && !selectedCustomer) {
-      toast.error('נא לבחור לקוח')
-      return
-    }
-    if (activeStep === 1 && !selectedTemplate) {
-      toast.error('נא לבחור תבנית')
-      return
-    }
-    setActiveStep((prevStep) => prevStep + 1)
-  }
+  const [generatedLink, setGeneratedLink] = useState(null)
+  const [generating, setGenerating] = useState(false)
 
-  const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1)
-  }
-
-  const handleSend = async () => {
-    if (!selectedCustomer || !selectedTemplate) {
-      toast.error('נא לבחור לקוח ותבנית')
-      return
-    }
+  // Generate link when both customer and template are selected
+  const handleGenerateLink = async () => {
+    if (!selectedCustomer || !selectedTemplate) return
 
     try {
-      setLoading(true)
-      const session = await user.getSession()
-      const token = session?.access_token
+      setGenerating(true)
+      const token = await getAccessToken()
 
+      // Create form request
       const response = await axios.post(
         `${API_URL}/api/form-requests`,
         {
           customer_id: selectedCustomer.id,
           form_template_id: selectedTemplate.id,
-          expiry_days: expiryDays,
-          custom_message: customMessage || undefined
+          expiry_days: 30
         },
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      setResult(response.data.data)
-      setShowResultDialog(true)
-      toast.success('מסמך נשלח בהצלחה!')
+      setGeneratedLink(response.data.data)
+      toast.success('קישור נוצר בהצלחה!')
+    } catch (error) {
+      console.error('Error generating link:', error)
+      toast.error(error.response?.data?.message || 'שגיאה ביצירת קישור')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
-      // Reset form after successful send
+  const handleSendViaWhatsApp = () => {
+    if (generatedLink?.whatsapp_link) {
+      window.open(generatedLink.whatsapp_link, '_blank')
+      toast.success('נפתח WhatsApp - שלח את ההודעה ללקוח!')
+
+      // Reset after sending
       setTimeout(() => {
-        setActiveStep(0)
         setSelectedCustomer(null)
         setSelectedTemplate(null)
-        setCustomMessage('')
-      }, 2000)
-    } catch (error) {
-      console.error('Error sending document:', error)
-      toast.error(error.response?.data?.message || 'שגיאה בשליחת מסמך')
-    } finally {
-      setLoading(false)
+        setGeneratedLink(null)
+      }, 1000)
     }
   }
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-    toast.success('הועתק ללוח')
-  }
-
-  const openWhatsApp = () => {
-    if (result?.whatsapp_link) {
-      window.open(result.whatsapp_link, '_blank')
+  const handleCopyLink = () => {
+    if (generatedLink?.signing_url) {
+      navigator.clipboard.writeText(generatedLink.signing_url)
+      toast.success('הקישור הועתק ללוח!')
     }
   }
+
+  const handleTestLink = () => {
+    if (generatedLink?.signing_url) {
+      window.open(generatedLink.signing_url, '_blank')
+    }
+  }
+
+  const handleReset = () => {
+    setSelectedCustomer(null)
+    setSelectedTemplate(null)
+    setGeneratedLink(null)
+  }
+
+  // Auto-generate link when both are selected
+  useEffect(() => {
+    if (selectedCustomer && selectedTemplate && !generatedLink && !generating) {
+      handleGenerateLink()
+    }
+  }, [selectedCustomer, selectedTemplate])
+
+  const canSend = selectedCustomer && selectedTemplate && !loading
 
   return (
     <Layout>
       <Container maxWidth="md">
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          שלח מסמך לחתימה
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          בחר לקוח, תבנית ושלח מסמך לחתימה דיגיטלית דרך WhatsApp
-        </Typography>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            שלח מסמך לחתימה
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            בחר לקוח ותבנית, ושלח מסמך לחתימה דיגיטלית דרך WhatsApp
+          </Typography>
+        </Box>
 
-        {/* Stepper */}
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          {/* Step 0: Select Customer */}
-          {activeStep === 0 && (
-            <Box>
+        <Paper sx={{ p: 3 }}>
+          <Grid container spacing={3}>
+            {/* Customer Selection */}
+            <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
-                בחר לקוח
+                1. בחר לקוח
               </Typography>
               <Autocomplete
                 options={customers}
@@ -216,33 +199,26 @@ const SendDocument = () => {
               />
 
               {selectedCustomer && (
-                <Card sx={{ mt: 2, bgcolor: 'success.light' }}>
+                <Card sx={{ mt: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
                   <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>
-                      לקוח נבחר:
+                    <Typography variant="subtitle2" color="success.dark" gutterBottom>
+                      ✓ לקוח נבחר
                     </Typography>
-                    <Typography variant="h6">
+                    <Typography variant="body1" fontWeight="bold">
                       {selectedCustomer.first_name} {selectedCustomer.last_name}
                     </Typography>
-                    <Typography variant="body2">
-                      טלפון: {selectedCustomer.phone_number}
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedCustomer.phone_number}
                     </Typography>
-                    {selectedCustomer.email && (
-                      <Typography variant="body2">
-                        מייל: {selectedCustomer.email}
-                      </Typography>
-                    )}
                   </CardContent>
                 </Card>
               )}
-            </Box>
-          )}
+            </Grid>
 
-          {/* Step 1: Select Template */}
-          {activeStep === 1 && (
-            <Box>
+            {/* Template Selection */}
+            <Grid item xs={12}>
               <Typography variant="h6" gutterBottom>
-                בחר תבנית
+                2. בחר תבנית מסמך
               </Typography>
               <FormControl fullWidth>
                 <InputLabel>תבנית מסמך</InputLabel>
@@ -256,182 +232,130 @@ const SendDocument = () => {
                 >
                   {templates.map((template) => (
                     <MenuItem key={template.id} value={template.id}>
-                      {template.template_name} ({template.page_count} עמודים)
+                      {template.template_name}
+                      {template.page_count && ` (${template.page_count} עמודים)`}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
 
               {selectedTemplate && (
-                <Card sx={{ mt: 2, bgcolor: 'success.light' }}>
+                <Card sx={{ mt: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.main' }}>
                   <CardContent>
-                    <Typography variant="subtitle1" gutterBottom>
-                      תבנית נבחרה:
+                    <Typography variant="subtitle2" color="success.dark" gutterBottom>
+                      ✓ תבנית נבחרה
                     </Typography>
-                    <Typography variant="h6">{selectedTemplate.template_name}</Typography>
-                    <Typography variant="body2">
-                      עמודים: {selectedTemplate.page_count}
+                    <Typography variant="body1" fontWeight="bold">
+                      {selectedTemplate.template_name}
                     </Typography>
                     {selectedTemplate.description && (
-                      <Typography variant="body2">
-                        תיאור: {selectedTemplate.description}
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedTemplate.description}
                       </Typography>
                     )}
                   </CardContent>
                 </Card>
               )}
-            </Box>
-          )}
+            </Grid>
 
-          {/* Step 2: Customize & Send */}
-          {activeStep === 2 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                סיכום ושליחה
-              </Typography>
+            {/* Link Preview & Actions */}
+            {generatedLink && (
+              <Grid item xs={12}>
+                <Paper sx={{ p: 3, bgcolor: 'success.50', border: '2px solid', borderColor: 'success.main' }}>
+                  <Typography variant="h6" gutterBottom color="success.dark">
+                    ✓ קישור נוצר בהצלחה
+                  </Typography>
 
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        לקוח
-                      </Typography>
-                      <Typography variant="body1" fontWeight="bold">
-                        {selectedCustomer?.first_name} {selectedCustomer?.last_name}
-                      </Typography>
-                      <Typography variant="body2">{selectedCustomer?.phone_number}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        תבנית
-                      </Typography>
-                      <Typography variant="body1" fontWeight="bold">
-                        {selectedTemplate?.template_name}
-                      </Typography>
-                      <Typography variant="body2">
-                        {selectedTemplate?.page_count} עמודים
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      קישור לחתימה:
+                    </Typography>
+                    <TextField
+                      value={generatedLink.signing_url}
+                      fullWidth
+                      size="small"
+                      InputProps={{
+                        readOnly: true,
+                        sx: { fontFamily: 'monospace', fontSize: '0.85rem' }
+                      }}
+                    />
+                  </Box>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={handleCopyLink}
+                        startIcon={<ContentCopyIcon />}
+                      >
+                        העתק קישור
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={handleTestLink}
+                        startIcon={<VisibilityIcon />}
+                      >
+                        בדוק קישור
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        fullWidth
+                        onClick={handleSendViaWhatsApp}
+                        startIcon={<WhatsAppIcon />}
+                      >
+                        שלח ב-WhatsApp
+                      </Button>
+                    </Grid>
+                  </Grid>
+
+                  <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      הקישור תקף ל-30 ימים
+                    </Typography>
+                    <Button size="small" onClick={handleReset}>
+                      התחל מחדש
+                    </Button>
+                  </Box>
+                </Paper>
               </Grid>
+            )}
 
-              <TextField
-                label="תוקף (ימים)"
-                type="number"
-                value={expiryDays}
-                onChange={(e) => setExpiryDays(parseInt(e.target.value) || 30)}
-                fullWidth
-                sx={{ mb: 2 }}
-                helperText="הקישור לחתימה יהיה תקף למספר הימים שתבחר"
-              />
-
-              <TextField
-                label="הודעה מותאמת אישית (אופציונלי)"
-                multiline
-                rows={4}
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                fullWidth
-                helperText="אם תשאיר ריק, תישלח הודעת ברירת מחדל"
-              />
-            </Box>
-          )}
-
-          {/* Navigation Buttons */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-            <Button
-              disabled={activeStep === 0}
-              onClick={handleBack}
-            >
-              חזור
-            </Button>
-            <Box>
-              {activeStep < 2 ? (
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                >
-                  המשך
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
-                  onClick={handleSend}
-                  disabled={loading}
-                >
-                  {loading ? 'שולח...' : 'שלח מסמך'}
-                </Button>
-              )}
-            </Box>
-          </Box>
+            {/* Generate Link Section (shown when no link yet) */}
+            {!generatedLink && (
+              <Grid item xs={12}>
+                <Box sx={{
+                  mt: 2,
+                  p: 3,
+                  bgcolor: 'primary.50',
+                  borderRadius: 2,
+                  border: '2px dashed',
+                  borderColor: canSend ? 'primary.main' : 'grey.300'
+                }}>
+                  <Typography variant="h6" gutterBottom align="center">
+                    3. {generating ? 'יוצר קישור...' : 'ממתין לבחירת לקוח ותבנית'}
+                  </Typography>
+                  {generating && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                      <CircularProgress />
+                    </Box>
+                  )}
+                  {!canSend && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                      בחר לקוח ותבנית כדי להמשיך
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+            )}
+          </Grid>
         </Paper>
-
-        {/* Result Dialog */}
-        <Dialog
-          open={showResultDialog}
-          onClose={() => setShowResultDialog(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CheckCircleIcon color="success" />
-              <Typography variant="h6">מסמך נשלח בהצלחה!</Typography>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              המסמך מוכן לשליחה ללקוח דרך WhatsApp
-            </Alert>
-
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              קישור לחתימה:
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-              <TextField
-                value={result?.signing_url || ''}
-                fullWidth
-                size="small"
-                InputProps={{
-                  readOnly: true
-                }}
-              />
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => copyToClipboard(result?.signing_url)}
-              >
-                <ContentCopyIcon />
-              </Button>
-            </Box>
-
-            <Button
-              variant="contained"
-              color="success"
-              fullWidth
-              size="large"
-              startIcon={<WhatsAppIcon />}
-              onClick={openWhatsApp}
-              sx={{ mt: 2 }}
-            >
-              פתח WhatsApp ושלח ללקוח
-            </Button>
-
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
-              הקישור תקף ל-{expiryDays} ימים
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowResultDialog(false)}>סגור</Button>
-          </DialogActions>
-        </Dialog>
       </Container>
     </Layout>
   )

@@ -302,44 +302,100 @@ exports.deleteCustomer = catchAsync(async (req, res) => {
 
 /**
  * Sync customers from Arbox
- * POST /api/customers/sync
+ * POST /api/customers/sync-from-arbox
  */
 exports.syncFromArbox = catchAsync(async (req, res) => {
+  console.log('🔄 Starting Arbox sync...');
+
   // Fetch customers from Arbox
   const arboxCustomers = await arboxService.syncAllUsers();
+  console.log(`📥 Fetched ${arboxCustomers.length} customers from Arbox`);
+
+  if (arboxCustomers.length === 0) {
+    return res.json({
+      success: true,
+      message: 'לא נמצאו לקוחות לסנכרון',
+      data: { total: 0, created: 0, updated: 0, errors: 0 }
+    });
+  }
+
+  // Get all existing customers with arbox IDs
+  const existingArboxIds = arboxCustomers
+    .map(c => c.arbox_customer_id)
+    .filter(Boolean);
+
+  const { data: existingCustomers } = await supabaseAdmin
+    .from('customers')
+    .select('id, arbox_customer_id')
+    .in('arbox_customer_id', existingArboxIds)
+    .is('deleted_at', null);
+
+  const existingMap = new Map(
+    (existingCustomers || []).map(c => [c.arbox_customer_id, c.id])
+  );
+
+  // Separate into create and update batches
+  const toCreate = [];
+  const toUpdate = [];
+
+  for (const customerData of arboxCustomers) {
+    if (!customerData.arbox_customer_id) {
+      console.warn('⚠️  Skipping customer without arbox_customer_id');
+      continue;
+    }
+
+    const existingId = existingMap.get(customerData.arbox_customer_id);
+    if (existingId) {
+      toUpdate.push({ ...customerData, id: existingId });
+    } else {
+      toCreate.push(customerData);
+    }
+  }
+
+  console.log(`📊 To create: ${toCreate.length}, To update: ${toUpdate.length}`);
 
   let created = 0;
   let updated = 0;
   let errors = 0;
 
-  // Upsert each customer
-  for (const customerData of arboxCustomers) {
-    try {
-      // Check if customer exists
-      const { data: existing } = await supabaseAdmin
-        .from('customers')
-        .select('id')
-        .eq('arbox_customer_id', customerData.arbox_customer_id)
-        .single();
+  // Bulk insert new customers
+  if (toCreate.length > 0) {
+    const { data, error } = await supabaseAdmin
+      .from('customers')
+      .insert(toCreate)
+      .select();
 
-      if (existing) {
-        // Update existing customer
-        await supabaseAdmin
-          .from('customers')
-          .update(customerData)
-          .eq('id', existing.id);
-        updated++;
-      } else {
-        // Create new customer
-        await supabaseAdmin
-          .from('customers')
-          .insert([customerData]);
-        created++;
-      }
-    } catch (err) {
-      console.error('Error syncing customer:', err);
-      errors++;
+    if (error) {
+      console.error('❌ Error creating customers:', error);
+      errors += toCreate.length;
+    } else {
+      created = data?.length || 0;
+      console.log(`✅ Created ${created} customers`);
     }
+  }
+
+  // Bulk update existing customers (in batches of 50)
+  if (toUpdate.length > 0) {
+    const batchSize = 50;
+    for (let i = 0; i < toUpdate.length; i += batchSize) {
+      const batch = toUpdate.slice(i, i + batchSize);
+
+      for (const customer of batch) {
+        const { id, ...updateData } = customer;
+        const { error } = await supabaseAdmin
+          .from('customers')
+          .update(updateData)
+          .eq('id', id);
+
+        if (error) {
+          console.error(`❌ Error updating customer ${id}:`, error);
+          errors++;
+        } else {
+          updated++;
+        }
+      }
+    }
+    console.log(`✅ Updated ${updated} customers`);
   }
 
   // Log audit trail
@@ -347,13 +403,15 @@ exports.syncFromArbox = catchAsync(async (req, res) => {
     .from('audit_log')
     .insert([{
       event_type: 'arbox_sync_completed',
-      event_data: { created, updated, errors },
+      event_data: { total: arboxCustomers.length, created, updated, errors },
       user_id: req.userId
     }]);
 
+  console.log(`✅ Sync completed: ${created} created, ${updated} updated, ${errors} errors`);
+
   res.json({
     success: true,
-    message: 'סנכרון הושלם', // "Sync completed" in Hebrew
+    message: `סנכרון הושלם: ${created} נוספו, ${updated} עודכנו`,
     data: {
       total: arboxCustomers.length,
       created,
@@ -408,4 +466,107 @@ exports.getCustomerActivity = catchAsync(async (req, res) => {
     success: true,
     data: activities
   });
+});
+
+/**
+ * Get signed documents for a customer
+ * GET /api/customers/:id/signed-documents
+ */
+exports.getSignedDocuments = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  // Get all form requests with their signed documents
+  const { data: formRequests, error } = await supabaseAdmin
+    .from('form_requests')
+    .select(`
+      id,
+      status,
+      created_at,
+      signed_at,
+      template:form_templates(id, template_name, description),
+      signed_document:signed_documents(id, file_url, file_path, file_size, created_at)
+    `)
+    .eq('customer_id', id)
+    .eq('status', 'signed')
+    .order('signed_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching signed documents:', error);
+    throw new AppError('שגיאה בטעינת מסמכים חתומים', 500);
+  }
+
+  // Flatten the data to extract signed documents
+  // Note: signed_document comes as an array from Supabase joins
+  const signedDocuments = formRequests
+    .filter(fr => fr.signed_document && fr.signed_document.length > 0)
+    .map(fr => {
+      const doc = Array.isArray(fr.signed_document) ? fr.signed_document[0] : fr.signed_document;
+      return {
+        id: doc.id,
+        form_request_id: fr.id,
+        template_name: fr.template?.template_name || 'מסמך',
+        template_description: fr.template?.description,
+        file_url: doc.file_url,
+        file_path: doc.file_path,
+        file_size: doc.file_size,
+        signed_at: fr.signed_at,
+        created_at: doc.created_at
+      };
+    });
+
+  res.json({
+    success: true,
+    data: signedDocuments
+  });
+});
+
+/**
+ * Download signed document
+ * GET /api/customers/:customerId/signed-documents/:documentId/download
+ */
+exports.downloadSignedDocument = catchAsync(async (req, res) => {
+  const { customerId, documentId } = req.params;
+
+  // Get the signed document with form request
+  const { data: signedDoc, error } = await supabaseAdmin
+    .from('signed_documents')
+    .select(`
+      id,
+      file_path,
+      file_size,
+      created_at,
+      form_request:form_requests(id, customer_id)
+    `)
+    .eq('id', documentId)
+    .single();
+
+  if (error || !signedDoc) {
+    throw new AppError('מסמך לא נמצא', 404);
+  }
+
+  // Verify the document belongs to this customer
+  if (signedDoc.form_request.customer_id !== customerId) {
+    throw new AppError('אין הרשאה לגשת למסמך זה', 403);
+  }
+
+  // Download file from Supabase storage
+  const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+    .from('signed-documents')
+    .download(signedDoc.file_path);
+
+  if (downloadError) {
+    console.error('Error downloading file:', downloadError);
+    throw new AppError('שגיאה בהורדת המסמך', 500);
+  }
+
+  // Convert blob to buffer
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+
+  // Set headers
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${signedDoc.file_path.split('/').pop()}"`);
+  res.setHeader('Content-Length', buffer.length);
+
+  // Send file
+  res.send(buffer);
 });
