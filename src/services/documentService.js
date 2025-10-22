@@ -3,6 +3,7 @@
 
 const { PDFDocument } = require('pdf-lib')
 const mammoth = require('mammoth')
+const pdfParse = require('pdf-parse')
 const fs = require('fs').promises
 const path = require('path')
 const { supabaseAdmin } = require('../config/supabase')
@@ -96,6 +97,17 @@ class DocumentService {
     }
   }
 
+  // Extract text from PDF
+  async extractTextFromPDF(buffer) {
+    try {
+      const data = await pdfParse(buffer)
+      return data.text
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error)
+      return ''
+    }
+  }
+
   // Upload file to Supabase Storage
   async uploadToStorage(buffer, filename, bucketName = 'form-templates') {
     try {
@@ -181,6 +193,9 @@ class DocumentService {
       // Get page count
       pageCount = await this.getPDFPageCount(pdfBuffer)
 
+      // Extract text content
+      const textContent = await this.extractTextFromPDF(pdfBuffer)
+
       // Upload to Supabase Storage
       const storageResult = await this.uploadToStorage(
         pdfBuffer,
@@ -193,7 +208,8 @@ class DocumentService {
         pdfPath: storageResult.path,
         pdfUrl: storageResult.url,
         pageCount,
-        fileSize: pdfBuffer.length
+        fileSize: pdfBuffer.length,
+        textContent
       }
     } catch (error) {
       console.error('Error processing document:', error)
@@ -202,33 +218,48 @@ class DocumentService {
   }
 
   // Add signature to PDF (for final signed document)
-  async addSignatureToPDF(pdfBuffer, signatureData, position) {
+  async addSignatureToPDF(pdfUrl, signatureImageBase64, signerName) {
     try {
+      // Fetch the original PDF
+      const response = await fetch(pdfUrl)
+      const pdfArrayBuffer = await response.arrayBuffer()
+      const pdfBuffer = Buffer.from(pdfArrayBuffer)
+
+      // Load the PDF
       const pdfDoc = await PDFDocument.load(pdfBuffer)
       const pages = pdfDoc.getPages()
+      const lastPage = pages[pages.length - 1]
+      const { width, height } = lastPage.getSize()
 
-      if (position.page >= pages.length) {
-        throw new Error('מספר עמוד לא תקין')
-      }
+      // Convert base64 signature to image
+      const signatureImageData = signatureImageBase64.replace(/^data:image\/\w+;base64,/, '')
+      const signatureImageBytes = Buffer.from(signatureImageData, 'base64')
+      const signatureImage = await pdfDoc.embedPng(signatureImageBytes)
 
-      const page = pages[position.page]
-      const { width, height } = page.getSize()
+      // Calculate position (bottom right of last page)
+      const signatureWidth = 150
+      const signatureHeight = 75
+      const x = width - signatureWidth - 50
+      const y = 100
 
-      // Calculate actual position (position is in percentage)
-      const x = (position.x / 100) * width
-      const y = ((100 - position.y) / 100) * height // Flip Y axis
-
-      // Add signature text (in a real implementation, this would be an image)
-      page.drawText(`חתימה: ${signatureData.signerName}`, {
+      // Draw signature image
+      lastPage.drawImage(signatureImage, {
         x,
         y,
-        size: 10
+        width: signatureWidth,
+        height: signatureHeight
       })
 
-      page.drawText(`תאריך: ${new Date().toLocaleDateString('he-IL')}`, {
+      // Add date stamp (no names to avoid Hebrew encoding issues)
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+      lastPage.drawText(`Signed on: ${dateStr}`, {
         x,
-        y: y - 15,
-        size: 8
+        y: y - 20,
+        size: 9
       })
 
       const pdfBytes = await pdfDoc.save()
@@ -236,6 +267,46 @@ class DocumentService {
     } catch (error) {
       console.error('Error adding signature to PDF:', error)
       throw new Error('שגיאה בהוספת חתימה ל-PDF')
+    }
+  }
+
+  // Upload signed PDF to storage
+  async uploadSignedDocument(buffer, originalFilename) {
+    try {
+      const timestamp = Date.now()
+      // Sanitize filename - remove Hebrew and special characters, keep only alphanumeric, dash, underscore, and extension
+      const sanitizedFilename = originalFilename
+        .replace(/[^\w\s.-]/g, '') // Remove non-alphanumeric except spaces, dots, dashes
+        .replace(/\s+/g, '-') // Replace spaces with dashes
+        .toLowerCase()
+      const filename = `signed-${timestamp}-${sanitizedFilename || 'document.pdf'}`
+      const filePath = `signed-documents/${filename}`
+
+      const { data, error } = await supabaseAdmin.storage
+        .from('signed-documents')
+        .upload(filePath, buffer, {
+          contentType: 'application/pdf',
+          upsert: false
+        })
+
+      if (error) {
+        console.error('Supabase storage error:', error)
+        throw new Error('שגיאה בהעלאת מסמך חתום')
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabaseAdmin.storage
+        .from('signed-documents')
+        .getPublicUrl(filePath)
+
+      return {
+        path: filePath,
+        url: publicUrl,
+        filename
+      }
+    } catch (error) {
+      console.error('Error uploading signed document:', error)
+      throw error
     }
   }
 }

@@ -4,9 +4,26 @@
 const jwt = require('jsonwebtoken');
 const { supabaseAdmin } = require('../config/supabase');
 
+// Whitelist of allowed emails
+// Add more emails here or use ALLOWED_EMAILS environment variable
+const ALLOWED_EMAILS = process.env.ALLOWED_EMAILS
+  ? process.env.ALLOWED_EMAILS.split(',').map(email => email.trim().toLowerCase())
+  : [
+      'tal.gurevich@gmail.com'
+    ];
+
+/**
+ * Check if user email is in whitelist
+ */
+const isEmailAllowed = (email) => {
+  if (!email) return false;
+  return ALLOWED_EMAILS.includes(email.toLowerCase());
+};
+
 /**
  * Middleware to verify authenticated users
  * Checks for valid session token in Authorization header
+ * Also checks if user email is in the whitelist
  */
 const requireAuth = async (req, res, next) => {
   try {
@@ -28,6 +45,15 @@ const requireAuth = async (req, res, next) => {
       return res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid or expired token'
+      });
+    }
+
+    // Check if user email is in whitelist
+    if (!isEmailAllowed(user.email)) {
+      console.warn(`Access denied for email: ${user.email}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'אין לך הרשאה לגשת למערכת זו' // "You don't have permission to access this system" in Hebrew
       });
     }
 
@@ -150,5 +176,7 @@ const optionalAuth = async (req, res, next) => {
 module.exports = {
   requireAuth,
   verifySigningToken,
-  optionalAuth
+  optionalAuth,
+  isEmailAllowed,
+  ALLOWED_EMAILS
 };

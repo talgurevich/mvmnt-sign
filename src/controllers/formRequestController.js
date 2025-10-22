@@ -133,38 +133,32 @@ exports.createFormRequest = catchAsync(async (req, res) => {
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + parseInt(expiry_days))
 
-  // Create form request
+  // Generate signing token (we need a temporary ID first, will use UUID)
+  const crypto = require('crypto')
+  const tempId = crypto.randomUUID()
+  const signingToken = generateSigningToken(tempId, customer_id)
+
+  // Generate signing URL
+  const signingUrl = `${process.env.FRONTEND_URL}/sign/${signingToken}`
+
+  // Create form request with all required fields
   const { data: formRequest, error: createError } = await supabaseAdmin
     .from('form_requests')
     .insert({
       customer_id,
       form_template_id,
-      status: 'pending',
-      expires_at: expiresAt.toISOString()
+      status: 'created',
+      signing_token: signingToken,
+      signing_url: signingUrl,
+      token_expires_at: expiresAt.toISOString()
     })
     .select()
     .single()
 
   if (createError) {
-    console.error('Error creating form request:', error)
+    console.error('Error creating form request:', createError)
     throw new AppError('שגיאה ביצירת בקשה', 500)
   }
-
-  // Generate signing token
-  const signingToken = generateSigningToken(formRequest.id, customer_id)
-
-  // Update form request with token
-  const { error: updateError } = await supabaseAdmin
-    .from('form_requests')
-    .update({ signing_token: signingToken })
-    .eq('id', formRequest.id)
-
-  if (updateError) {
-    console.error('Error updating form request with token:', updateError)
-  }
-
-  // Generate signing URL
-  const signingUrl = `${process.env.FRONTEND_URL}/sign/${signingToken}`
 
   // Generate WhatsApp message
   const defaultMessage = custom_message ||
@@ -176,19 +170,14 @@ exports.createFormRequest = catchAsync(async (req, res) => {
 
   const whatsappLink = generateWhatsAppLink(customer.phone_number, defaultMessage)
 
-  // Update customer document counts
-  await supabaseAdmin.rpc('increment_customer_documents', {
-    customer_uuid: customer_id,
-    sent_count: 1
-  }).catch(() => {
-    // Fallback: manual update
-    supabaseAdmin
-      .from('customers')
-      .update({
-        total_documents_sent: (customer.total_documents_sent || 0) + 1
-      })
-      .eq('id', customer_id)
-  })
+  // Update customer document counts (manual update)
+  await supabaseAdmin
+    .from('customers')
+    .update({
+      total_documents_sent: (customer.total_documents_sent || 0) + 1,
+      last_document_sent_at: new Date().toISOString()
+    })
+    .eq('id', customer_id)
 
   // Log audit
   await supabaseAdmin.from('audit_log').insert({
@@ -249,9 +238,8 @@ exports.resendFormRequest = catchAsync(async (req, res) => {
   await supabaseAdmin
     .from('form_requests')
     .update({
-      status: 'pending',
-      expires_at: newExpiryDate.toISOString(),
-      resent_at: new Date().toISOString()
+      status: 'created',
+      token_expires_at: newExpiryDate.toISOString()
     })
     .eq('id', id)
 
