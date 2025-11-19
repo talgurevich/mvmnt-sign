@@ -26,6 +26,7 @@ import Customers from './pages/Customers'
 import Forms from './pages/Forms'
 import SendDocument from './pages/SendDocument'
 import SignDocument from './pages/SignDocument'
+import Analytics from './pages/Analytics'
 
 function App() {
   return (
@@ -69,6 +70,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SendDocument />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
                   </ProtectedRoute>
                 }
               />

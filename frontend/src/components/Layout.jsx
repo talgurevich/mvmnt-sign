@@ -23,6 +23,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard'
 import PeopleIcon from '@mui/icons-material/People'
 import DescriptionIcon from '@mui/icons-material/Description'
 import SendIcon from '@mui/icons-material/Send'
+import AnalyticsIcon from '@mui/icons-material/Analytics'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -45,6 +46,7 @@ const Layout = ({ children }) => {
 
   const menuItems = [
     { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'ניתוח נתונים', icon: <AnalyticsIcon />, path: '/analytics' },
     { text: 'שלח מסמך', icon: <SendIcon />, path: '/send-document' },
     { text: 'לקוחות', icon: <PeopleIcon />, path: '/customers' },
     { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' }
