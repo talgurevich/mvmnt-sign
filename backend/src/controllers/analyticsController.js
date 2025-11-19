@@ -2,6 +2,22 @@ const arboxService = require('../services/arboxService');
 const { catchAsync } = require('../middleware/errorHandler');
 
 /**
+ * Categorize membership by type
+ */
+function categorizeMembership(membershipName) {
+  const name = (membershipName || '').toLowerCase();
+
+  if (name.includes('pilates')) return 'Pilates';
+  if (name.includes('lift') || name.includes('move')) return 'Lift + Move';
+  if (name.includes('yoga')) return 'Yoga';
+  if (name.includes('teen') || name.includes('נוער')) return 'Teens';
+  if (name.includes('open gym')) return 'Open Gym';
+  if (name.includes('elite') || name.includes('vip')) return 'Elite VIP';
+
+  return 'Other';
+}
+
+/**
  * Get membership analytics overview
  */
 exports.getAnalyticsOverview = catchAsync(async (req, res) => {
@@ -16,27 +32,28 @@ exports.getAnalyticsOverview = catchAsync(async (req, res) => {
   // Count total active members
   const totalActiveMembers = activeMembers.length;
 
-  // Group by membership type and count
-  const membershipDistribution = {};
+  // Group by category and count
+  const categoryDistribution = {};
 
   activeMembers.forEach(user => {
-    const membershipType = user.membership_type_name;
-    if (!membershipDistribution[membershipType]) {
-      membershipDistribution[membershipType] = {
+    const category = categorizeMembership(user.membership_type_name);
+    if (!categoryDistribution[category]) {
+      categoryDistribution[category] = {
         count: 0,
         members: []
       };
     }
-    membershipDistribution[membershipType].count++;
-    membershipDistribution[membershipType].members.push({
+    categoryDistribution[category].count++;
+    categoryDistribution[category].members.push({
       id: user.id,
       name: `${user.first_name} ${user.last_name}`,
-      email: user.email
+      email: user.email,
+      originalType: user.membership_type_name
     });
   });
 
   // Convert to array format for pie chart
-  const membershipTypes = Object.entries(membershipDistribution)
+  const membershipTypes = Object.entries(categoryDistribution)
     .map(([type, data]) => ({
       type,
       count: data.count,
