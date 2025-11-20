@@ -10,27 +10,37 @@ import {
   Alert,
   Paper
 } from '@mui/material';
-import { Pie } from 'react-chartjs-2';
+import { Pie, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
-  Legend
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement
 } from 'chart.js';
 import Layout from '../components/Layout';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import PeopleIcon from '@mui/icons-material/People';
 import CategoryIcon from '@mui/icons-material/Category';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 // Register ChartJS components
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const Analytics = () => {
   const { getAccessToken } = useAuth();
   const [data, setData] = useState(null);
+  const [timelineData, setTimelineData] = useState(null);
+  const [churnData, setChurnData] = useState(null);
+  const [leadsData, setLeadsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -40,11 +50,31 @@ const Analytics = () => {
         setLoading(true);
         setError(null);
         const token = await getAccessToken();
-        const response = await axios.get(
-          `${API_URL}/api/analytics/overview`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setData(response.data);
+
+        // Fetch overview, timeline, churn, and leads data in parallel
+        const [overviewResponse, timelineResponse, churnResponse, leadsResponse] = await Promise.all([
+          axios.get(
+            `${API_URL}/api/analytics/overview`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+          axios.get(
+            `${API_URL}/api/analytics/members-over-time?months=12`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+          axios.get(
+            `${API_URL}/api/analytics/churn-over-time?months=12`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+          axios.get(
+            `${API_URL}/api/analytics/leads-over-time?months=12`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        ]);
+
+        setData(overviewResponse.data);
+        setTimelineData(timelineResponse.data);
+        setChurnData(churnResponse.data);
+        setLeadsData(leadsResponse.data);
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
         setError('שגיאה בטעינת נתוני הניתוח. נסה שוב מאוחר יותר.');
@@ -103,6 +133,196 @@ const Analytics = () => {
             const percentage = data.membershipTypes[context.dataIndex].percentage;
             return `${label}: ${value} (${percentage}%)`;
           }
+        }
+      }
+    }
+  };
+
+  // Prepare timeline chart data with breakdown by category
+  const lineChartData = timelineData ? (() => {
+    // Get all unique categories
+    const categories = new Set();
+    timelineData.months.forEach(month => {
+      Object.keys(month.byCategory).forEach(cat => categories.add(cat));
+    });
+
+    // Color mapping for categories
+    const categoryColors = {
+      'Pilates': { border: '#FF6384', bg: 'rgba(255, 99, 132, 0.1)' },
+      'Lift + Move': { border: '#36A2EB', bg: 'rgba(54, 162, 235, 0.1)' },
+      'Yoga': { border: '#FFCE56', bg: 'rgba(255, 206, 86, 0.1)' },
+      'Teens': { border: '#4BC0C0', bg: 'rgba(75, 192, 192, 0.1)' },
+      'Open Gym': { border: '#9966FF', bg: 'rgba(153, 102, 255, 0.1)' },
+      'Elite VIP': { border: '#FF9F40', bg: 'rgba(255, 159, 64, 0.1)' },
+      'Other': { border: '#C9CBCF', bg: 'rgba(201, 203, 207, 0.1)' }
+    };
+
+    // Create dataset for each category
+    const datasets = Array.from(categories).map(category => {
+      const colors = categoryColors[category] || { border: '#11998e', bg: 'rgba(17, 153, 142, 0.1)' };
+      return {
+        label: category,
+        data: timelineData.months.map(m => m.byCategory[category] || 0),
+        borderColor: colors.border,
+        backgroundColor: colors.bg,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      };
+    });
+
+    return {
+      labels: timelineData.months.map(m => m.label),
+      datasets
+    };
+  })() : null;
+
+  const lineChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          font: {
+            size: 12,
+            family: 'Arial'
+          },
+          padding: 15,
+          usePointStyle: true
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return `${context.dataset.label}: ${context.parsed.y}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        }
+      }
+    }
+  };
+
+  // Prepare churn chart data with breakdown by category
+  const churnChartData = churnData ? (() => {
+    // Get all unique categories
+    const categories = new Set();
+    churnData.months.forEach(month => {
+      Object.keys(month.byCategory).forEach(cat => categories.add(cat));
+    });
+
+    // Color mapping for categories (same as new members for consistency)
+    const categoryColors = {
+      'Pilates': { border: '#FF6384', bg: 'rgba(255, 99, 132, 0.1)' },
+      'Lift + Move': { border: '#36A2EB', bg: 'rgba(54, 162, 235, 0.1)' },
+      'Yoga': { border: '#FFCE56', bg: 'rgba(255, 206, 86, 0.1)' },
+      'Teens': { border: '#4BC0C0', bg: 'rgba(75, 192, 192, 0.1)' },
+      'Open Gym': { border: '#9966FF', bg: 'rgba(153, 102, 255, 0.1)' },
+      'Elite VIP': { border: '#FF9F40', bg: 'rgba(255, 159, 64, 0.1)' },
+      'Other': { border: '#C9CBCF', bg: 'rgba(201, 203, 207, 0.1)' }
+    };
+
+    // Create dataset for each category
+    const datasets = Array.from(categories).map(category => {
+      const colors = categoryColors[category] || { border: '#f093fb', bg: 'rgba(240, 147, 251, 0.1)' };
+      return {
+        label: category,
+        data: churnData.months.map(m => m.byCategory[category] || 0),
+        borderColor: colors.border,
+        backgroundColor: colors.bg,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      };
+    });
+
+    return {
+      labels: churnData.months.map(m => m.label),
+      datasets
+    };
+  })() : null;
+
+  const churnChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          font: {
+            size: 12,
+            family: 'Arial'
+          },
+          padding: 15,
+          usePointStyle: true
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return `${context.dataset.label}: ${context.parsed.y}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        }
+      }
+    }
+  };
+
+  // Prepare leads chart data
+  const leadsChartData = leadsData ? {
+    labels: leadsData.months.map(m => m.label),
+    datasets: [
+      {
+        label: 'לידים חדשים',
+        data: leadsData.months.map(m => m.newLeads),
+        borderColor: '#a8edea',
+        backgroundColor: 'rgba(168, 237, 234, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }
+    ]
+  } : null;
+
+  const leadsChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return `לידים חדשים: ${context.parsed.y}`;
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
         }
       }
     }
@@ -187,6 +407,57 @@ const Analytics = () => {
               </CardContent>
             </Card>
           </Grid>
+
+          {/* New Members Over Time Line Chart */}
+          {lineChartData && (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 4 }}>
+                <Box display="flex" alignItems="center" mb={3}>
+                  <TrendingUpIcon sx={{ fontSize: 32, mr: 2, color: '#11998e' }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    חברים חדשים לפי חודש
+                  </Typography>
+                </Box>
+                <Box sx={{ height: '400px', position: 'relative' }}>
+                  <Line data={lineChartData} options={lineChartOptions} />
+                </Box>
+              </Paper>
+            </Grid>
+          )}
+
+          {/* Churn Over Time Line Chart */}
+          {churnChartData && (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 4 }}>
+                <Box display="flex" alignItems="center" mb={3}>
+                  <TrendingDownIcon sx={{ fontSize: 32, mr: 2, color: '#f093fb' }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    נשירת חברים לפי חודש
+                  </Typography>
+                </Box>
+                <Box sx={{ height: '400px', position: 'relative' }}>
+                  <Line data={churnChartData} options={churnChartOptions} />
+                </Box>
+              </Paper>
+            </Grid>
+          )}
+
+          {/* Leads Over Time Line Chart */}
+          {leadsChartData && (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 4 }}>
+                <Box display="flex" alignItems="center" mb={3}>
+                  <PersonAddIcon sx={{ fontSize: 32, mr: 2, color: '#a8edea' }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    לידים חדשים לפי חודש
+                  </Typography>
+                </Box>
+                <Box sx={{ height: '400px', position: 'relative' }}>
+                  <Line data={leadsChartData} options={leadsChartOptions} />
+                </Box>
+              </Paper>
+            </Grid>
+          )}
 
           {/* Pie Chart */}
           <Grid item xs={12}>

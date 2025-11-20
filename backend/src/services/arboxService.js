@@ -93,6 +93,19 @@ class ArboxService {
   }
 
   /**
+   * Get membership data for all users
+   * @returns {Promise<Array>} Membership data including subscription types
+   */
+  async getMembershipsData() {
+    try {
+      const response = await this.client.get('/users/membershipsData');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch memberships data: ${error.message}`);
+    }
+  }
+
+  /**
    * Transform Arbox user data to our customer format
    * @param {Object} arboxUser - User data from Arbox API
    * @returns {Object} Formatted customer data
@@ -169,6 +182,45 @@ class ArboxService {
       return null;
     } catch (error) {
       throw new Error(`Failed to find user by phone: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get all leads
+   * @returns {Promise<Array>} List of leads
+   */
+  async getLeads() {
+    try {
+      const response = await this.client.get('/leads');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch Arbox leads: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get converted leads
+   * @returns {Promise<Array>} List of converted leads
+   */
+  async getConvertedLeads() {
+    try {
+      const response = await this.client.get('/convertedLeads');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch converted leads: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get lost leads
+   * @returns {Promise<Array>} List of lost leads
+   */
+  async getLostLeads() {
+    try {
+      const response = await this.client.get('/lostLeads');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to fetch lost leads: ${error.message}`);
     }
   }
 }
