@@ -123,6 +123,7 @@ app.use('/api/form-templates', require('./routes/formTemplateRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/form-requests', require('./routes/formRequestRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/finance', require('./routes/financeRoutes'));
 
 // Public signing routes (no authentication required)
 app.use('/api/sign', require('./routes/signingRoutes'));

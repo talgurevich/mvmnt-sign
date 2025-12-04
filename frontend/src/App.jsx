@@ -27,6 +27,7 @@ import Forms from './pages/Forms'
 import SendDocument from './pages/SendDocument'
 import SignDocument from './pages/SignDocument'
 import Analytics from './pages/Analytics'
+import Finance from './pages/Finance'
 
 function App() {
   return (
@@ -78,6 +79,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/finance"
+                element={
+                  <ProtectedRoute>
+                    <Finance />
                   </ProtectedRoute>
                 }
               />
