@@ -303,120 +303,122 @@ exports.deleteCustomer = catchAsync(async (req, res) => {
 /**
  * Sync customers from Arbox
  * POST /api/customers/sync-from-arbox
+ * Returns immediately and processes in background to avoid Heroku's 30s timeout
  */
 exports.syncFromArbox = catchAsync(async (req, res) => {
+  const userId = req.userId;
   console.log('🔄 Starting Arbox sync...');
 
-  // Fetch customers from Arbox
-  const arboxCustomers = await arboxService.syncAllUsers();
-  console.log(`📥 Fetched ${arboxCustomers.length} customers from Arbox`);
-
-  if (arboxCustomers.length === 0) {
-    return res.json({
-      success: true,
-      message: 'לא נמצאו לקוחות לסנכרון',
-      data: { total: 0, created: 0, updated: 0, errors: 0 }
-    });
-  }
-
-  // Get all existing customers with arbox IDs
-  const existingArboxIds = arboxCustomers
-    .map(c => c.arbox_customer_id)
-    .filter(Boolean);
-
-  const { data: existingCustomers } = await supabaseAdmin
-    .from('customers')
-    .select('id, arbox_customer_id')
-    .in('arbox_customer_id', existingArboxIds)
-    .is('deleted_at', null);
-
-  const existingMap = new Map(
-    (existingCustomers || []).map(c => [c.arbox_customer_id, c.id])
-  );
-
-  // Separate into create and update batches
-  const toCreate = [];
-  const toUpdate = [];
-
-  for (const customerData of arboxCustomers) {
-    if (!customerData.arbox_customer_id) {
-      console.warn('⚠️  Skipping customer without arbox_customer_id');
-      continue;
-    }
-
-    const existingId = existingMap.get(customerData.arbox_customer_id);
-    if (existingId) {
-      toUpdate.push({ ...customerData, id: existingId });
-    } else {
-      toCreate.push(customerData);
-    }
-  }
-
-  console.log(`📊 To create: ${toCreate.length}, To update: ${toUpdate.length}`);
-
-  let created = 0;
-  let updated = 0;
-  let errors = 0;
-
-  // Bulk insert new customers
-  if (toCreate.length > 0) {
-    const { data, error } = await supabaseAdmin
-      .from('customers')
-      .insert(toCreate)
-      .select();
-
-    if (error) {
-      console.error('❌ Error creating customers:', error);
-      errors += toCreate.length;
-    } else {
-      created = data?.length || 0;
-      console.log(`✅ Created ${created} customers`);
-    }
-  }
-
-  // Bulk update existing customers (in batches of 50)
-  if (toUpdate.length > 0) {
-    const batchSize = 50;
-    for (let i = 0; i < toUpdate.length; i += batchSize) {
-      const batch = toUpdate.slice(i, i + batchSize);
-
-      for (const customer of batch) {
-        const { id, ...updateData } = customer;
-        const { error } = await supabaseAdmin
-          .from('customers')
-          .update(updateData)
-          .eq('id', id);
-
-        if (error) {
-          console.error(`❌ Error updating customer ${id}:`, error);
-          errors++;
-        } else {
-          updated++;
-        }
-      }
-    }
-    console.log(`✅ Updated ${updated} customers`);
-  }
-
-  // Log audit trail
-  await supabaseAdmin
-    .from('audit_log')
-    .insert([{
-      event_type: 'arbox_sync_completed',
-      event_data: { total: arboxCustomers.length, created, updated, errors },
-      user_id: req.userId
-    }]);
-
-  console.log(`✅ Sync completed: ${created} created, ${updated} updated, ${errors} errors`);
-
+  // Return response immediately
   res.json({
     success: true,
-    message: `סנכרון הושלם: ${created} נוספו, ${updated} עודכנו`,
-    data: {
-      total: arboxCustomers.length,
-      created,
-      updated,
-      errors
+    message: 'סנכרון התחיל, הנתונים יתעדכנו בקרוב',
+    data: { status: 'processing' }
+  });
+
+  // Process sync in background
+  setImmediate(async () => {
+    try {
+      // Fetch customers from Arbox
+      const arboxCustomers = await arboxService.syncAllUsers();
+      console.log(`📥 Fetched ${arboxCustomers.length} customers from Arbox`);
+
+      if (arboxCustomers.length === 0) {
+        console.log('ℹ️  No customers to sync');
+        return;
+      }
+
+      // Get all existing customers with arbox IDs
+      const existingArboxIds = arboxCustomers
+        .map(c => c.arbox_customer_id)
+        .filter(Boolean);
+
+      const { data: existingCustomers } = await supabaseAdmin
+        .from('customers')
+        .select('id, arbox_customer_id')
+        .in('arbox_customer_id', existingArboxIds)
+        .is('deleted_at', null);
+
+      const existingMap = new Map(
+        (existingCustomers || []).map(c => [c.arbox_customer_id, c.id])
+      );
+
+      // Separate into create and update batches
+      const toCreate = [];
+      const toUpdate = [];
+
+      for (const customerData of arboxCustomers) {
+        if (!customerData.arbox_customer_id) {
+          console.warn('⚠️  Skipping customer without arbox_customer_id');
+          continue;
+        }
+
+        const existingId = existingMap.get(customerData.arbox_customer_id);
+        if (existingId) {
+          toUpdate.push({ ...customerData, id: existingId });
+        } else {
+          toCreate.push(customerData);
+        }
+      }
+
+      console.log(`📊 To create: ${toCreate.length}, To update: ${toUpdate.length}`);
+
+      let created = 0;
+      let updated = 0;
+      let errors = 0;
+
+      // Bulk insert new customers
+      if (toCreate.length > 0) {
+        const { data, error } = await supabaseAdmin
+          .from('customers')
+          .insert(toCreate)
+          .select();
+
+        if (error) {
+          console.error('❌ Error creating customers:', error);
+          errors += toCreate.length;
+        } else {
+          created = data?.length || 0;
+          console.log(`✅ Created ${created} customers`);
+        }
+      }
+
+      // Bulk update existing customers (in batches of 50)
+      if (toUpdate.length > 0) {
+        const batchSize = 50;
+        for (let i = 0; i < toUpdate.length; i += batchSize) {
+          const batch = toUpdate.slice(i, i + batchSize);
+
+          for (const customer of batch) {
+            const { id, ...updateData } = customer;
+            const { error } = await supabaseAdmin
+              .from('customers')
+              .update(updateData)
+              .eq('id', id);
+
+            if (error) {
+              console.error(`❌ Error updating customer ${id}:`, error);
+              errors++;
+            } else {
+              updated++;
+            }
+          }
+        }
+        console.log(`✅ Updated ${updated} customers`);
+      }
+
+      // Log audit trail
+      await supabaseAdmin
+        .from('audit_log')
+        .insert([{
+          event_type: 'arbox_sync_completed',
+          event_data: { total: arboxCustomers.length, created, updated, errors },
+          user_id: userId
+        }]);
+
+      console.log(`✅ Sync completed: ${created} created, ${updated} updated, ${errors} errors`);
+    } catch (error) {
+      console.error('❌ Background sync failed:', error);
     }
   });
 });
