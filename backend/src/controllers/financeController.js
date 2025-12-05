@@ -159,13 +159,11 @@ exports.uploadTransactions = catchAsync(async (req, res) => {
  * GET /api/finance/transactions
  */
 exports.getTransactions = catchAsync(async (req, res) => {
-  const userId = req.user.id;
   const { startDate, endDate, type, limit = 1000, offset = 0 } = req.query;
 
   let query = supabaseAdmin
     .from('bank_transactions')
     .select('*', { count: 'exact' })
-    .eq('user_id', userId)
     .order('transaction_date', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -201,13 +199,11 @@ exports.getTransactions = catchAsync(async (req, res) => {
  * GET /api/finance/summary
  */
 exports.getSummary = catchAsync(async (req, res) => {
-  const userId = req.user.id;
   const { startDate, endDate } = req.query;
 
   let query = supabaseAdmin
     .from('bank_transactions')
     .select('debit, credit, balance, transaction_date')
-    .eq('user_id', userId)
     .order('transaction_date', { ascending: true });
 
   if (startDate) {
@@ -244,13 +240,11 @@ exports.getSummary = catchAsync(async (req, res) => {
  * GET /api/finance/monthly
  */
 exports.getMonthlyData = catchAsync(async (req, res) => {
-  const userId = req.user.id;
   const { startDate, endDate } = req.query;
 
   let query = supabaseAdmin
     .from('bank_transactions')
     .select('transaction_date, debit, credit, balance, type')
-    .eq('user_id', userId)
     .order('transaction_date', { ascending: true });
 
   if (startDate) {
@@ -313,13 +307,11 @@ exports.getMonthlyData = catchAsync(async (req, res) => {
  * GET /api/finance/categories
  */
 exports.getCategoryBreakdown = catchAsync(async (req, res) => {
-  const userId = req.user.id;
   const { startDate, endDate, type: filterType } = req.query;
 
   let query = supabaseAdmin
     .from('bank_transactions')
-    .select('type, debit, credit')
-    .eq('user_id', userId);
+    .select('type, debit, credit');
 
   if (startDate) {
     query = query.gte('transaction_date', startDate);
@@ -388,13 +380,11 @@ exports.getCategoryBreakdown = catchAsync(async (req, res) => {
  * GET /api/finance/recipients
  */
 exports.getRecipients = catchAsync(async (req, res) => {
-  const userId = req.user.id;
   const { startDate, endDate } = req.query;
 
   let query = supabaseAdmin
     .from('bank_transactions')
     .select('recipient, debit, type, details')
-    .eq('user_id', userId)
     .gt('debit', 0);
 
   if (startDate) {
@@ -448,12 +438,9 @@ exports.getRecipients = catchAsync(async (req, res) => {
  * GET /api/finance/imports
  */
 exports.getImports = catchAsync(async (req, res) => {
-  const userId = req.user.id;
-
   const { data, error } = await supabaseAdmin
     .from('finance_imports')
     .select('*')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -469,15 +456,13 @@ exports.getImports = catchAsync(async (req, res) => {
  * DELETE /api/finance/imports/:id
  */
 exports.deleteImport = catchAsync(async (req, res) => {
-  const userId = req.user.id;
   const { id } = req.params;
 
-  // Verify ownership
+  // Verify import exists
   const { data: importRecord, error: fetchError } = await supabaseAdmin
     .from('finance_imports')
     .select('id')
     .eq('id', id)
-    .eq('user_id', userId)
     .single();
 
   if (fetchError || !importRecord) {
