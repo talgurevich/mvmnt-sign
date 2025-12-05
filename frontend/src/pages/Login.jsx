@@ -63,6 +63,21 @@ const Login = () => {
           <CardContent sx={{ p: 6, textAlign: 'center' }}>
             {/* Logo/Title */}
             <Box sx={{ mb: 4 }}>
+              <Box
+                component="img"
+                src="/ilana-logo.jpg"
+                alt="ILANA.INK"
+                sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  mb: 2,
+                  boxShadow: 3,
+                  border: '3px solid',
+                  borderColor: 'primary.main'
+                }}
+              />
               <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
                 ILANA.INK
               </Typography>
