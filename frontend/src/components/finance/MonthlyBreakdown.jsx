@@ -12,9 +12,11 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableRow
+  TableRow,
+  Divider
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SendIcon from '@mui/icons-material/Send';
 import { formatCurrency } from '../../utils/finance/chartHelpers';
 import { getTopExpenses } from '../../utils/finance/dataAggregation';
 
@@ -40,6 +42,12 @@ const MonthlyBreakdown = ({ monthlyData }) => {
         const net = month.income - month.expenses;
         const topExpenses = getTopExpenses(month.transactions, 5);
         const categories = Object.entries(month.byCategory);
+
+        // Get transfers for this month (transactions with recipient)
+        const transfers = month.transactions
+          ?.filter(tx => tx.recipient && tx.debit > 0)
+          .sort((a, b) => b.debit - a.debit) || [];
+        const totalTransfers = transfers.reduce((sum, tx) => sum + tx.debit, 0);
 
         return (
           <Accordion key={month.monthKey} defaultExpanded={sortedMonths.indexOf(month) === 0}>
@@ -157,6 +165,59 @@ const MonthlyBreakdown = ({ monthlyData }) => {
                     <Typography color="text.secondary">אין קטגוריות להצגה</Typography>
                   )}
                 </Grid>
+
+                {/* Transfers Breakdown */}
+                {transfers.length > 0 && (
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <SendIcon sx={{ color: '#9966FF' }} />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        העברות בנקאיות
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={`${transfers.length} העברות`}
+                        variant="outlined"
+                        sx={{ ml: 1 }}
+                      />
+                      <Box sx={{ flexGrow: 1 }} />
+                      <Chip
+                        size="small"
+                        label={`סה"כ: ${formatCurrency(totalTransfers)}`}
+                        sx={{ bgcolor: '#9966FF', color: 'white', fontWeight: 600 }}
+                      />
+                    </Box>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>תאריך</TableCell>
+                          <TableCell>נמען</TableCell>
+                          <TableCell>פרטים</TableCell>
+                          <TableCell align="left">סכום</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {transfers.map((tx, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              {new Date(tx.transaction_date).toLocaleDateString('he-IL')}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 500 }}>
+                              {tx.recipient}
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {tx.details || tx.purpose || '-'}
+                            </TableCell>
+                            <TableCell align="left" sx={{ color: 'error.main', fontWeight: 600 }}>
+                              {formatCurrency(tx.debit)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Grid>
+                )}
               </Grid>
             </AccordionDetails>
           </Accordion>
