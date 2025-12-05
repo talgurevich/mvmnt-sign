@@ -59,6 +59,15 @@ const Finance = () => {
   const [tabValue, setTabValue] = useState(0);
   const [selectedPieMonth, setSelectedPieMonth] = useState('all');
 
+  // Filter transactions to only show July-November (exclude June and December)
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(tx => {
+      if (!tx.transaction_date) return false;
+      const month = new Date(tx.transaction_date).getMonth() + 1; // 1-12
+      return month >= 7 && month <= 11; // July (7) through November (11)
+    });
+  }, [transactions]);
+
   // Fetch existing transactions on mount
   useEffect(() => {
     fetchData();
@@ -131,13 +140,13 @@ const Finance = () => {
     }
   };
 
-  // Compute aggregated data
-  const summary = useMemo(() => calculateSummary(transactions), [transactions]);
-  const monthlyData = useMemo(() => aggregateByMonth(transactions), [transactions]);
-  const expenseCategories = useMemo(() => aggregateByCategory(transactions, 'expense'), [transactions]);
-  const incomeCategories = useMemo(() => aggregateByCategory(transactions, 'income'), [transactions]);
-  const recipients = useMemo(() => aggregateTransferRecipients(transactions), [transactions]);
-  const insights = useMemo(() => generateInsights(transactions, monthlyData, expenseCategories), [transactions, monthlyData, expenseCategories]);
+  // Compute aggregated data (using filtered transactions - July to November only)
+  const summary = useMemo(() => calculateSummary(filteredTransactions), [filteredTransactions]);
+  const monthlyData = useMemo(() => aggregateByMonth(filteredTransactions), [filteredTransactions]);
+  const expenseCategories = useMemo(() => aggregateByCategory(filteredTransactions, 'expense'), [filteredTransactions]);
+  const incomeCategories = useMemo(() => aggregateByCategory(filteredTransactions, 'income'), [filteredTransactions]);
+  const recipients = useMemo(() => aggregateTransferRecipients(filteredTransactions), [filteredTransactions]);
+  const insights = useMemo(() => generateInsights(filteredTransactions, monthlyData, expenseCategories), [filteredTransactions, monthlyData, expenseCategories]);
 
   if (loading) {
     return (
@@ -149,7 +158,7 @@ const Finance = () => {
     );
   }
 
-  const hasData = transactions.length > 0;
+  const hasData = filteredTransactions.length > 0;
 
   return (
     <Layout>
@@ -229,7 +238,7 @@ const Finance = () => {
 
                 {/* Balance Over Time */}
                 <Grid item xs={12}>
-                  <BalanceLineChart transactions={transactions} />
+                  <BalanceLineChart transactions={filteredTransactions} />
                 </Grid>
 
                 {/* Pie Charts */}
@@ -262,14 +271,14 @@ const Finance = () => {
             )}
 
             {tabValue === 2 && (
-              <TransactionsTable transactions={transactions} />
+              <TransactionsTable transactions={filteredTransactions} />
             )}
           </>
         )}
 
         {hasData && (
           <Typography variant="caption" display="block" sx={{ mt: 3, textAlign: 'center', color: 'text.secondary' }}>
-            {transactions.length} תנועות מ-{imports.length} קבצים
+            {filteredTransactions.length} תנועות (יולי-נובמבר) מ-{imports.length} קבצים
           </Typography>
         )}
       </Container>
