@@ -56,7 +56,22 @@ const Layout = ({ children }) => {
 
   const drawer = (
     <Box>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2 }}>
+      <Toolbar sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 2 }}>
+        <Box
+          component="img"
+          src="/ilana-logo.jpg"
+          alt="ILANA.INK"
+          sx={{
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            objectFit: 'cover',
+            mb: 1,
+            border: '2px solid',
+            borderColor: 'grey.800',
+            filter: 'grayscale(100%) contrast(1.2)',
+          }}
+        />
         <Typography variant="h6" fontWeight="bold" color="primary">
           ILANA.INK
         </Typography>

@@ -75,7 +75,8 @@ const Login = () => {
                   mb: 2,
                   boxShadow: 3,
                   border: '3px solid',
-                  borderColor: 'primary.main'
+                  borderColor: 'grey.800',
+                  filter: 'grayscale(100%) contrast(1.2)',
                 }}
               />
               <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
