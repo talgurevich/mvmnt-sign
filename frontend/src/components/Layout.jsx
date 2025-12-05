@@ -58,7 +58,7 @@ const Layout = ({ children }) => {
     <Box>
       <Toolbar sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2 }}>
         <Typography variant="h6" fontWeight="bold" color="primary">
-          מערכת חתימה
+          ILANA.INK
         </Typography>
       </Toolbar>
       <Divider />
@@ -101,7 +101,7 @@ const Layout = ({ children }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            מערכת חתימה דיגיטלית - Arbox
+            ILANA.INK
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>

@@ -84,7 +84,7 @@ const Dashboard = () => {
           ברוך הבא, {user?.user_metadata?.full_name || user?.email}
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          מערכת לניהול חתימות דיגיטליות עבור לקוחות Arbox
+          מערכת לניהול חתימות דיגיטליות
         </Typography>
 
         {/* Status Cards */}

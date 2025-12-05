@@ -64,10 +64,10 @@ const Login = () => {
             {/* Logo/Title */}
             <Box sx={{ mb: 4 }}>
               <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
-                מערכת חתימה דיגיטלית
+                ILANA.INK
               </Typography>
               <Typography variant="h6" color="text.secondary">
-                Arbox - שירות חתימת מסמכים
+                מערכת חתימה דיגיטלית
               </Typography>
             </Box>
 
@@ -106,7 +106,7 @@ const Login = () => {
               התחברות בטוחה באמצעות חשבון Google שלך
             </Typography>
             <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-              מיועד למנהלי Arbox בלבד
+              מיועד למנהלים בלבד
             </Typography>
           </CardContent>
         </Card>
@@ -117,7 +117,7 @@ const Login = () => {
           align="center"
           sx={{ mt: 4, color: 'white', fontWeight: 500 }}
         >
-          מערכת לניהול חתימות דיגיטליות עבור לקוחות Arbox
+          מערכת לניהול חתימות דיגיטליות
         </Typography>
       </Container>
     </Box>
