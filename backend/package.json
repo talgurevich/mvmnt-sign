@@ -10,7 +10,8 @@
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.js",
-    "migrate": "node database/migrate.js"
+    "migrate": "node database/migrate.js",
+    "job:notifications": "node src/jobs/notificationScheduler.js"
   },
   "keywords": [
     "arbox",
