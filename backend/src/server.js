@@ -126,6 +126,7 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/bank', require('./routes/bankRoutes'));
 app.use('/api/leads', require('./routes/leadsRoutes'));
+app.use('/api/waitlist', require('./routes/waitlistRoutes'));
 
 // Public signing routes (no authentication required)
 app.use('/api/sign', require('./routes/signingRoutes'));

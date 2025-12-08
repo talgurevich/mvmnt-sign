@@ -29,6 +29,7 @@ import SignDocument from './pages/SignDocument'
 import Analytics from './pages/Analytics'
 import Finance from './pages/Finance'
 import Leads from './pages/Leads'
+import WaitingList from './pages/WaitingList'
 
 function App() {
   return (
@@ -96,6 +97,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Leads />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/waitlist"
+                element={
+                  <ProtectedRoute>
+                    <WaitingList />
                   </ProtectedRoute>
                 }
               />
