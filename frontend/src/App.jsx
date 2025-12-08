@@ -28,6 +28,7 @@ import SendDocument from './pages/SendDocument'
 import SignDocument from './pages/SignDocument'
 import Analytics from './pages/Analytics'
 import Finance from './pages/Finance'
+import Leads from './pages/Leads'
 
 function App() {
   return (
@@ -87,6 +88,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Finance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leads"
+                element={
+                  <ProtectedRoute>
+                    <Leads />
                   </ProtectedRoute>
                 }
               />
