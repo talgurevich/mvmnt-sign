@@ -37,6 +37,9 @@ import EventIcon from '@mui/icons-material/Event';
 import PersonIcon from '@mui/icons-material/Person';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import WarningIcon from '@mui/icons-material/Warning';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -63,9 +66,10 @@ const WaitingList = () => {
 
       setData(response.data);
 
-      // Auto-expand first session if there are any
+      // Auto-expand first session with available spot, or first session
       if (response.data.sessions?.length > 0) {
-        setExpandedSession(0);
+        const firstWithSpot = response.data.sessions.findIndex(s => s.hasAvailableSpot);
+        setExpandedSession(firstWithSpot >= 0 ? firstWithSpot : 0);
       }
     } catch (err) {
       console.error('Failed to fetch waitlist:', err);
@@ -75,17 +79,21 @@ const WaitingList = () => {
     }
   };
 
-  const openWhatsApp = (phone, name, eventName, date, time) => {
+  const openWhatsApp = (phone, name, eventName, date, time, hasSpot) => {
     const cleanPhone = phone?.replace(/\D/g, '');
     if (cleanPhone) {
       const israelPhone = cleanPhone.startsWith('0')
         ? '972' + cleanPhone.substring(1)
         : cleanPhone;
 
-      // Pre-filled message
-      const message = encodeURIComponent(
-        `היי ${name}! התפנה מקום בשיעור ${eventName} ב-${date} בשעה ${time}. האם תרצה להירשם?`
-      );
+      // Different message based on whether there's a spot available
+      const message = hasSpot
+        ? encodeURIComponent(
+            `היי ${name}! התפנה מקום בשיעור ${eventName} ב-${date} בשעה ${time}. האם תרצה להירשם?`
+          )
+        : encodeURIComponent(
+            `היי ${name}! אנחנו רואים שאתה ברשימת ההמתנה לשיעור ${eventName} ב-${date} בשעה ${time}. נעדכן אותך כשיתפנה מקום!`
+          );
 
       window.open(`https://wa.me/${israelPhone}?text=${message}`, '_blank');
     }
@@ -163,10 +171,26 @@ const WaitingList = () => {
           </Alert>
         )}
 
+        {/* Alert for sessions with available spots */}
+        {data && data.sessionsWithAvailableSpots > 0 && (
+          <Alert
+            severity="success"
+            icon={<EventAvailableIcon />}
+            sx={{ mb: 3 }}
+          >
+            <Typography fontWeight="bold">
+              יש {data.sessionsWithAvailableSpots} שיעורים עם מקום פנוי ורשימת המתנה!
+            </Typography>
+            <Typography variant="body2">
+              ניתן ליצור קשר עם הממתינים ולהציע להם להירשם
+            </Typography>
+          </Alert>
+        )}
+
         {/* Summary Cards */}
         {data && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={6} sm={4}>
+            <Grid item xs={6} sm={3}>
               <Card sx={{ bgcolor: 'warning.light' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -181,7 +205,7 @@ const WaitingList = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={6} sm={4}>
+            <Grid item xs={6} sm={3}>
               <Card sx={{ bgcolor: 'info.light' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -196,17 +220,32 @@ const WaitingList = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: 'success.light' }}>
+            <Grid item xs={6} sm={3}>
+              <Card sx={{ bgcolor: data.sessionsWithAvailableSpots > 0 ? 'success.light' : 'grey.200' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <EventIcon sx={{ color: 'success.dark' }} />
-                    <Typography variant="h6" fontWeight="bold" color="success.dark">
-                      {data.dateRange?.from} - {data.dateRange?.to}
+                    <CheckCircleIcon sx={{ color: data.sessionsWithAvailableSpots > 0 ? 'success.dark' : 'grey.500' }} />
+                    <Typography variant="h4" fontWeight="bold" color={data.sessionsWithAvailableSpots > 0 ? 'success.dark' : 'grey.500'}>
+                      {data.sessionsWithAvailableSpots}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" color="success.dark">
-                    טווח תאריכים
+                  <Typography variant="body2" color={data.sessionsWithAvailableSpots > 0 ? 'success.dark' : 'grey.500'}>
+                    עם מקומות פנויים
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Card sx={{ bgcolor: 'primary.light' }}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <EventIcon sx={{ color: 'primary.dark' }} />
+                    <Typography variant="body1" fontWeight="bold" color="primary.dark">
+                      {data.dateRange?.from}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="primary.dark">
+                    עד {data.dateRange?.to}
                   </Typography>
                 </CardContent>
               </Card>
@@ -241,7 +280,8 @@ const WaitingList = () => {
                 onChange={() => setExpandedSession(expandedSession === index ? null : index)}
                 sx={{
                   mb: 1,
-                  borderRight: `4px solid ${getEventColor(session.event_name)}`,
+                  borderRight: `4px solid ${session.hasAvailableSpot ? '#4caf50' : getEventColor(session.event_name)}`,
+                  bgcolor: session.hasAvailableSpot ? 'success.50' : 'inherit',
                   '&:before': { display: 'none' }
                 }}
               >
@@ -260,21 +300,34 @@ const WaitingList = () => {
 
                     {/* Event Name */}
                     <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" fontWeight="bold">
-                        {session.event_name}
-                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="h6" fontWeight="bold">
+                          {session.event_name}
+                        </Typography>
+                        {session.hasAvailableSpot && (
+                          <Chip
+                            size="small"
+                            icon={<CheckCircleIcon />}
+                            label={`${session.availableSpots} מקומות פנויים`}
+                            color="success"
+                          />
+                        )}
+                      </Box>
                       <Typography variant="body2" color="text.secondary">
                         {session.coach}
+                        {session.maxMembers && (
+                          <span> | {session.currentBookings}/{session.maxMembers} רשומים</span>
+                        )}
                       </Typography>
                     </Box>
 
                     {/* Waitlist Count Badge */}
                     <Badge
                       badgeContent={session.waitlist.length}
-                      color="warning"
+                      color={session.hasAvailableSpot ? 'success' : 'warning'}
                       sx={{ mr: 2 }}
                     >
-                      <Avatar sx={{ bgcolor: getEventColor(session.event_name) }}>
+                      <Avatar sx={{ bgcolor: session.hasAvailableSpot ? '#4caf50' : getEventColor(session.event_name) }}>
                         <PersonIcon />
                       </Avatar>
                     </Badge>
@@ -282,6 +335,18 @@ const WaitingList = () => {
                 </AccordionSummary>
 
                 <AccordionDetails>
+                  {/* Available spot alert */}
+                  {session.hasAvailableSpot && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      <Typography fontWeight="bold">
+                        יש {session.availableSpots} מקומות פנויים!
+                      </Typography>
+                      <Typography variant="body2">
+                        ניתן ליצור קשר עם הראשון ברשימה ולהציע לו להירשם
+                      </Typography>
+                    </Alert>
+                  )}
+
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
@@ -295,17 +360,33 @@ const WaitingList = () => {
                       </TableHead>
                       <TableBody>
                         {session.waitlist.map((person, idx) => (
-                          <TableRow key={person.id} hover>
+                          <TableRow
+                            key={person.id}
+                            hover
+                            sx={{
+                              bgcolor: session.hasAvailableSpot && idx < session.availableSpots
+                                ? 'success.50'
+                                : 'inherit'
+                            }}
+                          >
                             <TableCell>
                               <Chip
                                 size="small"
                                 label={idx + 1}
-                                color={idx === 0 ? 'warning' : 'default'}
+                                color={session.hasAvailableSpot && idx < session.availableSpots ? 'success' : (idx === 0 ? 'warning' : 'default')}
                               />
                             </TableCell>
                             <TableCell>
                               <Typography fontWeight={idx === 0 ? 'bold' : 'normal'}>
                                 {person.name}
+                                {session.hasAvailableSpot && idx < session.availableSpots && (
+                                  <Chip
+                                    size="small"
+                                    label="יש מקום!"
+                                    color="success"
+                                    sx={{ ml: 1 }}
+                                  />
+                                )}
                               </Typography>
                             </TableCell>
                             <TableCell>{person.phone || '-'}</TableCell>
@@ -323,7 +404,7 @@ const WaitingList = () => {
                                         <PhoneIcon fontSize="small" />
                                       </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="שלח הודעת WhatsApp">
+                                    <Tooltip title={session.hasAvailableSpot ? "הודע על מקום פנוי" : "שלח הודעת WhatsApp"}>
                                       <IconButton
                                         size="small"
                                         onClick={() => openWhatsApp(
@@ -331,9 +412,13 @@ const WaitingList = () => {
                                           person.name,
                                           session.event_name,
                                           session.date,
-                                          session.time
+                                          session.time,
+                                          session.hasAvailableSpot
                                         )}
-                                        sx={{ color: '#25D366' }}
+                                        sx={{
+                                          color: session.hasAvailableSpot ? '#4caf50' : '#25D366',
+                                          bgcolor: session.hasAvailableSpot ? 'success.100' : 'inherit'
+                                        }}
                                       >
                                         <WhatsAppIcon fontSize="small" />
                                       </IconButton>
@@ -348,14 +433,18 @@ const WaitingList = () => {
                     </Table>
                   </TableContainer>
 
-                  {/* Quick action to message all */}
-                  {session.waitlist.length > 1 && (
-                    <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                  {/* Info text */}
+                  <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+                    {session.hasAvailableSpot ? (
+                      <Typography variant="body2" color="success.main" fontWeight="bold">
+                        יש מקום פנוי! לחץ על כפתור ה-WhatsApp ליד שם המתאמן כדי לשלוח לו הודעה
+                      </Typography>
+                    ) : (
                       <Typography variant="body2" color="text.secondary">
                         כשמתפנה מקום, תוכל לפנות קודם למי שמספר 1 ברשימה
                       </Typography>
-                    </Box>
-                  )}
+                    )}
+                  </Box>
                 </AccordionDetails>
               </Accordion>
             ))}
