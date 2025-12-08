@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SendIcon from '@mui/icons-material/Send';
+import { Bar } from 'react-chartjs-2';
 import { formatCurrency } from '../../utils/finance/chartHelpers';
 import { getTopExpenses } from '../../utils/finance/dataAggregation';
 
@@ -83,6 +84,53 @@ const MonthlyBreakdown = ({ monthlyData }) => {
               </Box>
             </AccordionSummary>
             <AccordionDetails>
+              {/* Income vs Expenses Bar Chart */}
+              <Box sx={{ mb: 3, maxWidth: 400 }}>
+                <Bar
+                  data={{
+                    labels: ['הכנסות', 'הוצאות', 'נטו'],
+                    datasets: [{
+                      data: [month.income, month.expenses, net],
+                      backgroundColor: [
+                        'rgba(76, 175, 80, 0.7)',
+                        'rgba(244, 67, 54, 0.7)',
+                        net >= 0 ? 'rgba(33, 150, 243, 0.7)' : 'rgba(255, 152, 0, 0.7)'
+                      ],
+                      borderColor: [
+                        'rgba(76, 175, 80, 1)',
+                        'rgba(244, 67, 54, 1)',
+                        net >= 0 ? 'rgba(33, 150, 243, 1)' : 'rgba(255, 152, 0, 1)'
+                      ],
+                      borderWidth: 1
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'y',
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => formatCurrency(Math.abs(context.raw))
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: (value) => formatCurrency(value)
+                        }
+                      }
+                    }
+                  }}
+                  height={100}
+                />
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
               <Grid container spacing={3}>
                 {/* Top 5 Expenses */}
                 <Grid item xs={12} md={6}>

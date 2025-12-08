@@ -30,6 +30,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 // Finance components
 import FileUploadDropzone from '../components/finance/FileUploadDropzone';
+import BankConnectionPanel from '../components/finance/BankConnectionPanel';
 import SummaryCards from '../components/finance/SummaryCards';
 import MonthlyBarChart from '../components/finance/MonthlyBarChart';
 import BalanceLineChart from '../components/finance/BalanceLineChart';
@@ -183,6 +184,9 @@ const Finance = () => {
             {error}
           </Alert>
         )}
+
+        {/* Bank Connection Section */}
+        <BankConnectionPanel onSyncComplete={() => fetchData()} />
 
         {/* File Upload Section */}
         <Paper sx={{ p: 3, mb: 4 }}>
