@@ -15,8 +15,11 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Avatar
+  Collapse
 } from '@mui/material'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import DashboardIcon from '@mui/icons-material/Dashboard'
@@ -39,6 +42,7 @@ const Layout = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [automationsOpen, setAutomationsOpen] = React.useState(true)
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -49,17 +53,23 @@ const Layout = ({ children }) => {
     navigate('/login')
   }
 
-  const menuItems = [
+  // Check if current path is in automations section
+  const isAutomationsPath = ['/leads', '/waitlist', '/birthdays', '/automations'].includes(location.pathname)
+
+  const mainMenuItems = [
     { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'לידים', icon: <PersonAddIcon />, path: '/leads' },
-    { text: 'רשימת המתנה', icon: <HourglassEmptyIcon />, path: '/waitlist' },
-    { text: 'ימי הולדת', icon: <CakeIcon />, path: '/birthdays' },
-    { text: 'אוטומציות', icon: <SmartToyIcon />, path: '/automations' },
     { text: 'ניתוח נתונים', icon: <AnalyticsIcon />, path: '/analytics' },
     { text: 'דוח פיננסי', icon: <AccountBalanceIcon />, path: '/finance' },
     { text: 'שלח מסמך', icon: <SendIcon />, path: '/send-document' },
     { text: 'לקוחות', icon: <PeopleIcon />, path: '/customers' },
     { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' }
+  ]
+
+  const automationsSubItems = [
+    { text: 'לידים', icon: <PersonAddIcon />, path: '/leads' },
+    { text: 'רשימת המתנה', icon: <HourglassEmptyIcon />, path: '/waitlist' },
+    { text: 'ימי הולדת', icon: <CakeIcon />, path: '/birthdays' },
+    { text: 'הגדרות', icon: <SettingsIcon />, path: '/automations' }
   ]
 
   const drawer = (
@@ -86,7 +96,58 @@ const Layout = ({ children }) => {
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {/* Dashboard - first item */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={location.pathname === '/dashboard'}
+            onClick={() => {
+              navigate('/dashboard')
+              setMobileOpen(false)
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}><DashboardIcon /></ListItemIcon>
+            <ListItemText primary="לוח בקרה" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Automations Section - Expandable */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setAutomationsOpen(!automationsOpen)}
+            selected={isAutomationsPath}
+            sx={{
+              bgcolor: isAutomationsPath ? 'action.selected' : 'inherit'
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}><SmartToyIcon /></ListItemIcon>
+            <ListItemText primary="אוטומציות" />
+            {automationsOpen ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+        </ListItem>
+        <Collapse in={automationsOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {automationsSubItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => {
+                    navigate(item.path)
+                    setMobileOpen(false)
+                  }}
+                  sx={{ pr: 4 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mr: 1 }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Collapse>
+
+        <Divider sx={{ my: 1 }} />
+
+        {/* Other menu items */}
+        {mainMenuItems.slice(1).map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               selected={location.pathname === item.path}
