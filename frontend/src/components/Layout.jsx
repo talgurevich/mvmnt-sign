@@ -32,6 +32,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
 import CakeIcon from '@mui/icons-material/Cake'
+import DrawIcon from '@mui/icons-material/Draw'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -43,6 +44,7 @@ const Layout = ({ children }) => {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [automationsOpen, setAutomationsOpen] = React.useState(true)
+  const [signingOpen, setSigningOpen] = React.useState(true)
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -55,21 +57,20 @@ const Layout = ({ children }) => {
 
   // Check if current path is in automations section
   const isAutomationsPath = ['/leads', '/waitlist', '/birthdays', '/automations'].includes(location.pathname)
-
-  const mainMenuItems = [
-    { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'ניתוח נתונים', icon: <AnalyticsIcon />, path: '/analytics' },
-    { text: 'דוח פיננסי', icon: <AccountBalanceIcon />, path: '/finance' },
-    { text: 'שלח מסמך', icon: <SendIcon />, path: '/send-document' },
-    { text: 'לקוחות', icon: <PeopleIcon />, path: '/customers' },
-    { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' }
-  ]
+  // Check if current path is in signing section
+  const isSigningPath = ['/send-document', '/forms', '/customers'].includes(location.pathname)
 
   const automationsSubItems = [
     { text: 'לידים', icon: <PersonAddIcon />, path: '/leads' },
     { text: 'רשימת המתנה', icon: <HourglassEmptyIcon />, path: '/waitlist' },
     { text: 'ימי הולדת', icon: <CakeIcon />, path: '/birthdays' },
     { text: 'הגדרות', icon: <SettingsIcon />, path: '/automations' }
+  ]
+
+  const signingSubItems = [
+    { text: 'שלח מסמך', icon: <SendIcon />, path: '/send-document' },
+    { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' },
+    { text: 'לקוחות', icon: <PeopleIcon />, path: '/customers' }
   ]
 
   const drawer = (
@@ -144,23 +145,69 @@ const Layout = ({ children }) => {
           </List>
         </Collapse>
 
+        {/* Signing Section - Expandable */}
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => setSigningOpen(!signingOpen)}
+            selected={isSigningPath}
+            sx={{
+              bgcolor: isSigningPath ? 'action.selected' : 'inherit'
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}><DrawIcon /></ListItemIcon>
+            <ListItemText primary="החתמות" />
+            {signingOpen ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+        </ListItem>
+        <Collapse in={signingOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {signingSubItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => {
+                    navigate(item.path)
+                    setMobileOpen(false)
+                  }}
+                  sx={{ pr: 4 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mr: 1 }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Collapse>
+
         <Divider sx={{ my: 1 }} />
 
-        {/* Other menu items */}
-        {mainMenuItems.slice(1).map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => {
-                navigate(item.path)
-                setMobileOpen(false)
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+        {/* Analytics */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={location.pathname === '/analytics'}
+            onClick={() => {
+              navigate('/analytics')
+              setMobileOpen(false)
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}><AnalyticsIcon /></ListItemIcon>
+            <ListItemText primary="ניתוח נתונים" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Finance */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={location.pathname === '/finance'}
+            onClick={() => {
+              navigate('/finance')
+              setMobileOpen(false)
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}><AccountBalanceIcon /></ListItemIcon>
+            <ListItemText primary="דוח פיננסי" />
+          </ListItemButton>
+        </ListItem>
       </List>
     </Box>
   )

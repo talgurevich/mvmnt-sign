@@ -81,7 +81,8 @@ class EmailChannel extends BaseChannel {
   renderTemplate(notification) {
     const templates = {
       'waitlist_spot_available': this.renderWaitlistSpotAvailable.bind(this),
-      'birthday_today': this.renderBirthdayToday.bind(this)
+      'birthday_today': this.renderBirthdayToday.bind(this),
+      'new_lead': this.renderNewLead.bind(this)
     };
 
     const renderer = templates[notification.type];
@@ -290,6 +291,108 @@ ${data.coach ? `- מדריך/ה: ${data.coach}` : ''}
 ${waitlistText}
 
 ניתן ליצור קשר עם הראשונים ברשימה ולהציע להם להירשם.
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  /**
+   * Template: New Lead
+   */
+  renderNewLead(notification) {
+    const { data } = notification;
+
+    const subject = data.leadCount === 1
+      ? `🆕 ליד חדש! ${data.leads[0].fullName}`
+      : `🆕 ${data.leadCount} לידים חדשים!`;
+
+    const leadsListHtml = data.leads.map(lead => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <strong>${lead.fullName}</strong>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${lead.phone || '-'}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${lead.email || '-'}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${lead.source}
+        </td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="he">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .header .emoji { font-size: 48px; margin-bottom: 10px; }
+          .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+          .stats { background: #ECFDF5; padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center; }
+          .stats-number { font-size: 48px; font-weight: bold; color: #059669; }
+          .stats-label { font-size: 14px; color: #6B7280; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background: #D1FAE5; padding: 12px; text-align: right; border-bottom: 2px solid #10B981; }
+          .footer { background: #f3f4f6; padding: 15px 20px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; font-size: 12px; color: #6B7280; }
+          .action-btn { display: inline-block; background: #10B981; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="emoji">🆕</div>
+            <h1>${data.leadCount === 1 ? 'ליד חדש!' : 'לידים חדשים!'}</h1>
+          </div>
+          <div class="content">
+            <div class="stats">
+              <div class="stats-number">${data.leadCount}</div>
+              <div class="stats-label">${data.leadCount === 1 ? 'ליד חדש נוסף למערכת' : 'לידים חדשים נוספו למערכת'}</div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>שם</th>
+                  <th>טלפון</th>
+                  <th>אימייל</th>
+                  <th>מקור</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${leadsListHtml}
+              </tbody>
+            </table>
+
+            <p style="margin-top: 20px; color: #6B7280;">
+              💡 <strong>טיפ:</strong> צרו קשר עם הלידים החדשים בהקדם האפשרי!
+            </p>
+          </div>
+          <div class="footer">
+            <p>הודעה זו נשלחה אוטומטית ממערכת ניהול הלידים.</p>
+            <p>זמן זיהוי: ${new Date(data.detectedAt).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const leadsListText = data.leads
+      .map(lead => `• ${lead.fullName} | ${lead.phone || 'אין טלפון'} | ${lead.source}`)
+      .join('\n');
+
+    const text = `
+🆕 ${data.leadCount === 1 ? 'ליד חדש!' : `${data.leadCount} לידים חדשים!`}
+
+${leadsListText}
+
+💡 צרו קשר עם הלידים החדשים בהקדם האפשרי!
     `.trim();
 
     return { subject, html, text };

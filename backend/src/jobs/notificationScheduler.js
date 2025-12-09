@@ -13,7 +13,8 @@ const { isAutomationEnabled, updateLastRun } = require('../controllers/automatio
 // Map automation IDs to detector names
 const AUTOMATION_DETECTORS = {
   'waitlist_capacity_notifications': 'waitlist_capacity',
-  'birthday_notifications': 'birthday_notifications'
+  'birthday_notifications': 'birthday_notifications',
+  'new_lead_notifications': 'new_lead_notifications'
 };
 
 async function runScheduledJob() {

@@ -33,3 +33,13 @@ VALUES (
   '{"run_time": "10:00", "timezone": "Asia/Jerusalem", "notify_admin": true}'
 )
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO automation_settings (id, name, description, is_enabled, config)
+VALUES (
+  'new_lead_notifications',
+  'התראות לידים חדשים',
+  'שליחת התראה בכל פעם שנוסף ליד חדש למערכת',
+  true,
+  '{"check_interval_minutes": 10, "notify_admin": true}'
+)
+ON CONFLICT (id) DO NOTHING;
