@@ -10,7 +10,11 @@ require('dotenv').config();
 const NotificationOrchestrator = require('../services/notifications/NotificationOrchestrator');
 const { isAutomationEnabled, updateLastRun } = require('../controllers/automationsController');
 
-const AUTOMATION_ID = 'waitlist_capacity_notifications';
+// Map automation IDs to detector names
+const AUTOMATION_DETECTORS = {
+  'waitlist_capacity_notifications': 'waitlist_capacity',
+  'birthday_notifications': 'birthday_notifications'
+};
 
 async function runScheduledJob() {
   console.log('='.repeat(60));
@@ -19,24 +23,37 @@ async function runScheduledJob() {
   console.log(`Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
   console.log('='.repeat(60));
 
-  // Check if automation is enabled
-  const enabled = await isAutomationEnabled(AUTOMATION_ID);
+  // Check which automations are enabled
+  const enabledDetectors = [];
 
-  if (!enabled) {
-    console.log('\n[Scheduler] Automation is DISABLED - skipping');
+  for (const [automationId, detectorName] of Object.entries(AUTOMATION_DETECTORS)) {
+    const enabled = await isAutomationEnabled(automationId);
+    console.log(`[Scheduler] ${automationId}: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+
+    if (enabled) {
+      enabledDetectors.push({ automationId, detectorName });
+    }
+  }
+
+  if (enabledDetectors.length === 0) {
+    console.log('\n[Scheduler] No automations enabled - skipping');
     console.log('='.repeat(60));
     process.exit(0);
   }
 
-  console.log('[Scheduler] Automation is ENABLED - running...\n');
+  console.log(`\n[Scheduler] Running ${enabledDetectors.length} enabled automation(s)...\n`);
 
   const orchestrator = new NotificationOrchestrator();
 
   try {
-    const result = await orchestrator.run();
+    // Run only enabled detectors
+    const detectorNames = enabledDetectors.map(d => d.detectorName);
+    const result = await orchestrator.run(detectorNames);
 
-    // Update last run timestamp
-    await updateLastRun(AUTOMATION_ID);
+    // Update last run timestamps for enabled automations
+    for (const { automationId } of enabledDetectors) {
+      await updateLastRun(automationId);
+    }
 
     console.log('\n' + '='.repeat(60));
     console.log('Job completed successfully');

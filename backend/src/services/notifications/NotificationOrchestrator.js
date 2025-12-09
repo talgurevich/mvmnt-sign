@@ -6,6 +6,7 @@
 const { supabaseAdmin } = require('../../config/supabase');
 const StateManager = require('./StateManager');
 const WaitlistCapacityDetector = require('./detectors/WaitlistCapacityDetector');
+const BirthdayDetector = require('./detectors/BirthdayDetector');
 const EmailChannel = require('./channels/EmailChannel');
 
 class NotificationOrchestrator {
@@ -14,7 +15,8 @@ class NotificationOrchestrator {
 
     // Register detectors
     this.detectors = {
-      waitlist_capacity: new WaitlistCapacityDetector(this.stateManager)
+      waitlist_capacity: new WaitlistCapacityDetector(this.stateManager),
+      birthday_notifications: new BirthdayDetector(this.stateManager)
     };
 
     // Register channels

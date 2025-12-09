@@ -28,6 +28,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
+import CakeIcon from '@mui/icons-material/Cake'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -52,6 +53,7 @@ const Layout = ({ children }) => {
     { text: 'לוח בקרה', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'לידים', icon: <PersonAddIcon />, path: '/leads' },
     { text: 'רשימת המתנה', icon: <HourglassEmptyIcon />, path: '/waitlist' },
+    { text: 'ימי הולדת', icon: <CakeIcon />, path: '/birthdays' },
     { text: 'אוטומציות', icon: <SmartToyIcon />, path: '/automations' },
     { text: 'ניתוח נתונים', icon: <AnalyticsIcon />, path: '/analytics' },
     { text: 'דוח פיננסי', icon: <AccountBalanceIcon />, path: '/finance' },

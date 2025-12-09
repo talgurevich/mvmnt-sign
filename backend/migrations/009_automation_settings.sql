@@ -23,3 +23,13 @@ VALUES (
   '{"check_interval_minutes": 10, "notify_admin": true}'
 )
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO automation_settings (id, name, description, is_enabled, config)
+VALUES (
+  'birthday_notifications',
+  'התראות ימי הולדת',
+  'שליחת התראה יומית ב-10:00 על ימי הולדת של לקוחות פעילים',
+  true,
+  '{"run_time": "10:00", "timezone": "Asia/Jerusalem", "notify_admin": true}'
+)
+ON CONFLICT (id) DO NOTHING;

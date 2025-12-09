@@ -80,7 +80,8 @@ class EmailChannel extends BaseChannel {
    */
   renderTemplate(notification) {
     const templates = {
-      'waitlist_spot_available': this.renderWaitlistSpotAvailable.bind(this)
+      'waitlist_spot_available': this.renderWaitlistSpotAvailable.bind(this),
+      'birthday_today': this.renderBirthdayToday.bind(this)
     };
 
     const renderer = templates[notification.type];
@@ -90,6 +91,104 @@ class EmailChannel extends BaseChannel {
     }
 
     return renderer(notification);
+  }
+
+  /**
+   * Template: Birthday today
+   */
+  renderBirthdayToday(notification) {
+    const { data } = notification;
+
+    const subject = `🎂 יום הולדת היום! ${data.birthdayCount} חוגגים - ${data.formattedDate}`;
+
+    const birthdayListHtml = data.birthdays.map(b => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+          <strong>${b.fullName}</strong>
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+          ${b.turningAge} שנים
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+          ${b.phone || '-'}
+        </td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="he">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%); color: white; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .header .emoji { font-size: 48px; margin-bottom: 10px; }
+          .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+          .stats { background: #FDF4FF; padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center; }
+          .stats-number { font-size: 48px; font-weight: bold; color: #9333EA; }
+          .stats-label { font-size: 14px; color: #6B7280; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background: #F3E8FF; padding: 12px; text-align: right; border-bottom: 2px solid #9333EA; }
+          .footer { background: #f3f4f6; padding: 15px 20px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; font-size: 12px; color: #6B7280; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="emoji">🎂</div>
+            <h1>יום הולדת שמח!</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">${data.formattedDate}</p>
+          </div>
+          <div class="content">
+            <div class="stats">
+              <div class="stats-number">${data.birthdayCount}</div>
+              <div class="stats-label">חוגגים היום יום הולדת</div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>שם</th>
+                  <th>גיל</th>
+                  <th>טלפון</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${birthdayListHtml}
+              </tbody>
+            </table>
+
+            <p style="margin-top: 20px; color: #6B7280;">
+              💡 <strong>טיפ:</strong> שלחו הודעת ברכה אישית לחוגגים!
+            </p>
+          </div>
+          <div class="footer">
+            <p>הודעה זו נשלחה אוטומטית ממערכת ניהול ימי הולדת.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const birthdayListText = data.birthdays
+      .map(b => `• ${b.fullName} (${b.turningAge} שנים) - ${b.phone || 'אין טלפון'}`)
+      .join('\n');
+
+    const text = `
+🎂 יום הולדת היום!
+${data.formattedDate}
+
+${data.birthdayCount} חוגגים היום:
+
+${birthdayListText}
+
+💡 שלחו הודעת ברכה אישית לחוגגים!
+    `.trim();
+
+    return { subject, html, text };
   }
 
   /**

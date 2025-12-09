@@ -31,6 +31,7 @@ import Finance from './pages/Finance'
 import Leads from './pages/Leads'
 import WaitingList from './pages/WaitingList'
 import Automations from './pages/Automations'
+import Birthdays from './pages/Birthdays'
 
 function App() {
   return (
@@ -114,6 +115,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Automations />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/birthdays"
+                element={
+                  <ProtectedRoute>
+                    <Birthdays />
                   </ProtectedRoute>
                 }
               />
