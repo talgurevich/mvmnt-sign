@@ -6,10 +6,10 @@
 const express = require('express');
 const router = express.Router();
 const trialsController = require('../controllers/trialsController');
-const { verifyToken } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 
 // All routes require authentication
-router.use(verifyToken);
+router.use(requireAuth);
 
 // GET /api/trials - Get upcoming trials
 router.get('/', trialsController.getTrials);
