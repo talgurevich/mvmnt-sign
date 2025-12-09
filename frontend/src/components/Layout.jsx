@@ -33,6 +33,7 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
 import CakeIcon from '@mui/icons-material/Cake'
 import DrawIcon from '@mui/icons-material/Draw'
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -56,7 +57,7 @@ const Layout = ({ children }) => {
   }
 
   // Check if current path is in automations section
-  const isAutomationsPath = ['/leads', '/waitlist', '/birthdays', '/automations'].includes(location.pathname)
+  const isAutomationsPath = ['/leads', '/waitlist', '/birthdays', '/trials', '/automations'].includes(location.pathname)
   // Check if current path is in signing section
   const isSigningPath = ['/send-document', '/forms', '/customers'].includes(location.pathname)
 
@@ -64,6 +65,7 @@ const Layout = ({ children }) => {
     { text: 'לידים', icon: <PersonAddIcon />, path: '/leads' },
     { text: 'רשימת המתנה', icon: <HourglassEmptyIcon />, path: '/waitlist' },
     { text: 'ימי הולדת', icon: <CakeIcon />, path: '/birthdays' },
+    { text: 'אימוני ניסיון', icon: <FitnessCenterIcon />, path: '/trials' },
     { text: 'הגדרות', icon: <SettingsIcon />, path: '/automations' }
   ]
 

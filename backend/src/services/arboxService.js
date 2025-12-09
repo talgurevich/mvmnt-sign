@@ -223,6 +223,25 @@ class ArboxService {
       throw new Error(`Failed to fetch lost leads: ${error.message}`);
     }
   }
+
+  /**
+   * Get trial classes report
+   * @param {string} fromDate - Start date in YYYY-MM-DD format
+   * @param {string} toDate - End date in YYYY-MM-DD format
+   * @returns {Promise<Array>} List of trial bookings
+   */
+  async getTrials(fromDate, toDate) {
+    try {
+      const response = await this.client.request({
+        method: 'GET',
+        url: '/reports/trialClassesReport',
+        data: { fromDate, toDate }
+      });
+      return response.data?.data || response.data || [];
+    } catch (error) {
+      throw new Error(`Failed to fetch trials: ${error.message}`);
+    }
+  }
 }
 
 // Export singleton instance

@@ -130,6 +130,7 @@ app.use('/api/waitlist', require('./routes/waitlistRoutes'));
 app.use('/api/notifications', require('./routes/notificationsRoutes'));
 app.use('/api/automations', require('./routes/automationsRoutes'));
 app.use('/api/birthdays', require('./routes/birthdaysRoutes'));
+app.use('/api/trials', require('./routes/trialsRoutes'));
 
 // Public signing routes (no authentication required)
 app.use('/api/sign', require('./routes/signingRoutes'));

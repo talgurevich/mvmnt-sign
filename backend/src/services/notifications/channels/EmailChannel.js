@@ -82,7 +82,9 @@ class EmailChannel extends BaseChannel {
     const templates = {
       'waitlist_spot_available': this.renderWaitlistSpotAvailable.bind(this),
       'birthday_today': this.renderBirthdayToday.bind(this),
-      'new_lead': this.renderNewLead.bind(this)
+      'new_lead': this.renderNewLead.bind(this),
+      'new_trial': this.renderNewTrial.bind(this),
+      'trial_reminder': this.renderTrialReminder.bind(this)
     };
 
     const renderer = templates[notification.type];
@@ -393,6 +395,255 @@ ${waitlistText}
 ${leadsListText}
 
 💡 צרו קשר עם הלידים החדשים בהקדם האפשרי!
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  /**
+   * Template: New Trial Registration
+   */
+  renderNewTrial(notification) {
+    const { data } = notification;
+
+    const subject = data.trialCount === 1
+      ? `🏋️ אימון ניסיון חדש! ${data.trials[0].fullName} - ${data.trials[0].className}`
+      : `🏋️ ${data.trialCount} אימוני ניסיון חדשים!`;
+
+    const trialsListHtml = data.trials.map(trial => {
+      const trialDate = new Date(trial.date).toLocaleDateString('he-IL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      const trialTime = trial.time?.substring(0, 5) || '';
+
+      return `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <strong>${trial.fullName}</strong>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trial.className}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trialDate}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trialTime}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trial.phone || '-'}
+        </td>
+      </tr>
+    `;
+    }).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="he">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.6; }
+          .container { max-width: 650px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); color: white; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .header .emoji { font-size: 48px; margin-bottom: 10px; }
+          .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+          .stats { background: #EEF2FF; padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center; }
+          .stats-number { font-size: 48px; font-weight: bold; color: #6366F1; }
+          .stats-label { font-size: 14px; color: #6B7280; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background: #E0E7FF; padding: 12px; text-align: right; border-bottom: 2px solid #6366F1; }
+          .footer { background: #f3f4f6; padding: 15px 20px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; font-size: 12px; color: #6B7280; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="emoji">🏋️</div>
+            <h1>${data.trialCount === 1 ? 'אימון ניסיון חדש!' : 'אימוני ניסיון חדשים!'}</h1>
+          </div>
+          <div class="content">
+            <div class="stats">
+              <div class="stats-number">${data.trialCount}</div>
+              <div class="stats-label">${data.trialCount === 1 ? 'נרשם לאימון ניסיון' : 'נרשמו לאימוני ניסיון'}</div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>שם</th>
+                  <th>שיעור</th>
+                  <th>תאריך</th>
+                  <th>שעה</th>
+                  <th>טלפון</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${trialsListHtml}
+              </tbody>
+            </table>
+
+            <p style="margin-top: 20px; color: #6B7280;">
+              💡 <strong>טיפ:</strong> שלחו הודעת אישור למתאמנים החדשים!
+            </p>
+          </div>
+          <div class="footer">
+            <p>הודעה זו נשלחה אוטומטית ממערכת ניהול אימוני הניסיון.</p>
+            <p>זמן זיהוי: ${new Date(data.detectedAt).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const trialsListText = data.trials.map(trial => {
+      const trialDate = new Date(trial.date).toLocaleDateString('he-IL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      return `• ${trial.fullName} | ${trial.className} | ${trialDate} ${trial.time?.substring(0, 5)} | ${trial.phone || 'אין טלפון'}`;
+    }).join('\n');
+
+    const text = `
+🏋️ ${data.trialCount === 1 ? 'אימון ניסיון חדש!' : `${data.trialCount} אימוני ניסיון חדשים!`}
+
+${trialsListText}
+
+💡 שלחו הודעת אישור למתאמנים החדשים!
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  /**
+   * Template: Trial Reminder (10 hours before)
+   */
+  renderTrialReminder(notification) {
+    const { data } = notification;
+
+    const subject = data.trialCount === 1
+      ? `⏰ תזכורת: אימון ניסיון בקרוב! ${data.trials[0].fullName}`
+      : `⏰ תזכורת: ${data.trialCount} אימוני ניסיון בקרוב!`;
+
+    const trialsListHtml = data.trials.map(trial => {
+      const trialDate = new Date(trial.date).toLocaleDateString('he-IL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      const trialTime = trial.time?.substring(0, 5) || '';
+
+      return `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <strong>${trial.fullName}</strong>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trial.className}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trialDate}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trialTime}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trial.phone || '-'}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          ${trial.coach || '-'}
+        </td>
+      </tr>
+    `;
+    }).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="he">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.6; }
+          .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .header .emoji { font-size: 48px; margin-bottom: 10px; }
+          .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+          .alert { background: #FEF3C7; padding: 15px; border-radius: 8px; margin: 15px 0; border-right: 4px solid #F59E0B; }
+          .stats { background: #FFFBEB; padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center; }
+          .stats-number { font-size: 48px; font-weight: bold; color: #D97706; }
+          .stats-label { font-size: 14px; color: #6B7280; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background: #FDE68A; padding: 12px; text-align: right; border-bottom: 2px solid #F59E0B; }
+          .footer { background: #f3f4f6; padding: 15px 20px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; font-size: 12px; color: #6B7280; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="emoji">⏰</div>
+            <h1>תזכורת - אימוני ניסיון בקרוב!</h1>
+          </div>
+          <div class="content">
+            <div class="alert">
+              <strong>שימו לב:</strong> האימונים הבאים מתחילים בעוד פחות מ-${data.reminderWindowHours} שעות!
+            </div>
+
+            <div class="stats">
+              <div class="stats-number">${data.trialCount}</div>
+              <div class="stats-label">${data.trialCount === 1 ? 'אימון ניסיון' : 'אימוני ניסיון'} בקרוב</div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>שם</th>
+                  <th>שיעור</th>
+                  <th>תאריך</th>
+                  <th>שעה</th>
+                  <th>טלפון</th>
+                  <th>מדריך/ה</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${trialsListHtml}
+              </tbody>
+            </table>
+
+            <p style="margin-top: 20px; color: #6B7280;">
+              💡 <strong>טיפ:</strong> כדאי לשלוח הודעת תזכורת למתאמנים ולוודא שהם מגיעים!
+            </p>
+          </div>
+          <div class="footer">
+            <p>הודעה זו נשלחה אוטומטית ממערכת ניהול אימוני הניסיון.</p>
+            <p>זמן זיהוי: ${new Date(data.detectedAt).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const trialsListText = data.trials.map(trial => {
+      const trialDate = new Date(trial.date).toLocaleDateString('he-IL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+      return `• ${trial.fullName} | ${trial.className} | ${trialDate} ${trial.time?.substring(0, 5)} | ${trial.phone || 'אין טלפון'} | מדריך: ${trial.coach || '-'}`;
+    }).join('\n');
+
+    const text = `
+⏰ תזכורת - אימוני ניסיון בקרוב!
+
+שימו לב: האימונים הבאים מתחילים בעוד פחות מ-${data.reminderWindowHours} שעות!
+
+${trialsListText}
+
+💡 כדאי לשלוח הודעת תזכורת למתאמנים ולוודא שהם מגיעים!
     `.trim();
 
     return { subject, html, text };

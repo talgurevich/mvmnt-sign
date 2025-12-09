@@ -32,6 +32,7 @@ import Leads from './pages/Leads'
 import WaitingList from './pages/WaitingList'
 import Automations from './pages/Automations'
 import Birthdays from './pages/Birthdays'
+import Trials from './pages/Trials'
 
 function App() {
   return (
@@ -123,6 +124,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Birthdays />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/trials"
+                element={
+                  <ProtectedRoute>
+                    <Trials />
                   </ProtectedRoute>
                 }
               />

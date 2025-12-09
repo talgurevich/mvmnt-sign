@@ -23,6 +23,9 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import CakeIcon from '@mui/icons-material/Cake';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -112,6 +115,12 @@ const Automations = () => {
     switch (automationId) {
       case 'waitlist_capacity_notifications':
         return <NotificationsActiveIcon />;
+      case 'birthday_notifications':
+        return <CakeIcon />;
+      case 'new_lead_notifications':
+        return <PersonAddIcon />;
+      case 'trial_notifications':
+        return <FitnessCenterIcon />;
       default:
         return <SmartToyIcon />;
     }
