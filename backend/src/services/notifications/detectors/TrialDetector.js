@@ -75,8 +75,16 @@ class TrialDetector extends BaseDetector {
     const previousRemindersSent = previousState?.stateData?.remindersSent || [];
     const currentTrialIds = currentTrials.map(t => t.id);
 
-    // 1. Detect NEW trial registrations
-    const newTrialIds = currentTrialIds.filter(id => !previousTrialIds.includes(id));
+    // FIRST RUN: If no previous state, just initialize without notifications for new trials
+    // (but still send reminders for trials within the window)
+    const isFirstRun = !previousState || previousTrialIds.length === 0;
+
+    if (isFirstRun) {
+      console.log(`[${this.eventType}] First run - initializing state with ${currentTrialIds.length} existing trials`);
+    }
+
+    // 1. Detect NEW trial registrations (skip on first run)
+    const newTrialIds = isFirstRun ? [] : currentTrialIds.filter(id => !previousTrialIds.includes(id));
 
     console.log(`[${this.eventType}] Previous trials: ${previousTrialIds.length}, Current: ${currentTrialIds.length}, New: ${newTrialIds.length}`);
 

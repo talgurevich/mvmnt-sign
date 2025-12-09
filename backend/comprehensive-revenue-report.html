@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Revenue Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .revenue-highlight {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .revenue-amount {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .revenue-label {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .stat-label {
+            font-size: 0.95em;
+            color: #666;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 40px 0;
+        }
+        .category-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .category-table th,
+        .category-table td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #ddd;
+        }
+        .category-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        .category-table tr:hover {
+            background: #f5f5f5;
+        }
+        .category-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 דוח הכנסות מקיף</h1>
+        <p class="subtitle">Comprehensive Revenue Analysis Report</p>
+
+        <div class="revenue-highlight">
+            <div class="revenue-label">סך הכנסות חודשיות</div>
+            <div class="revenue-amount">₪76,110.00</div>
+            <div class="revenue-label">הכנסה שנתית משוערת: ₪913,320.00</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">225</div>
+                <div class="stat-label">סך כל החברים</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">193</div>
+                <div class="stat-label">חברים תואמים</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">₪394</div>
+                <div class="stat-label">ממוצע לחבר/חודש</div>
+            </div>
+        </div>
+
+        <h2 style="margin: 30px 0 20px 0; color: #333; text-align: center;">התפלגות הכנסות לפי קטגוריה</h2>
+
+        <div class="chart-container">
+            <canvas id="revenueChart"></canvas>
+        </div>
+
+        <table class="category-table">
+            <thead>
+                <tr>
+                    <th>קטגוריה</th>
+                    <th>מספר חברים</th>
+                    <th>הכנסה חודשית</th>
+                    <th>הכנסה שנתית</th>
+                    <th>ממוצע לחבר</th>
+                    <th>אחוז</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                    <tr>
+                        <td class="category-name">Lift + Move</td>
+                        <td>132</td>
+                        <td><strong>₪50,560.00</strong></td>
+                        <td>₪606,720.00</td>
+                        <td>₪383.03</td>
+                        <td>66.4%</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="category-name">Pilates</td>
+                        <td>59</td>
+                        <td><strong>₪25,090.00</strong></td>
+                        <td>₪301,080.00</td>
+                        <td>₪425.25</td>
+                        <td>33.0%</td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="category-name">Yoga</td>
+                        <td>2</td>
+                        <td><strong>₪460.00</strong></td>
+                        <td>₪5,520.00</td>
+                        <td>₪230.00</td>
+                        <td>0.6%</td>
+                    </tr>
+                    
+            </tbody>
+        </table>
+
+        <div class="footer">
+            Generated on 14.11.2025, 17:37:27 | Based on Arbox membership data
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+
+        const labels = ["Lift + Move","Pilates","Yoga"];
+        const revenues = [50560,25090,460];
+        const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'];
+
+        const data = {
+            labels: labels,
+            datasets: [{
+                label: 'Monthly Revenue',
+                data: revenues,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        };
+
+        const config = {
+            type: 'pie',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 14
+                            },
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ₪' + value.toLocaleString('he-IL') + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        new Chart(ctx, config);
+    </script>
+</body>
+</html>

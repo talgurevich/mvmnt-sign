@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income by Membership Category</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 3em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .revenue-hero {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .revenue-main {
+            font-size: 5em;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .revenue-label {
+            font-size: 1.5em;
+            opacity: 0.95;
+            margin-bottom: 10px;
+        }
+        .revenue-annual {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-top: 20px;
+        }
+        .chart-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin: 50px 0;
+            align-items: start;
+        }
+        .chart-container {
+            position: relative;
+            height: 600px;
+        }
+        .breakdown-section {
+            padding: 20px;
+        }
+        .breakdown-section h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .category-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 6px solid;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .category-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .category-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .category-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .percentage-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #666;
+            font-size: 1em;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        @media (max-width: 1200px) {
+            .chart-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 הכנסות לפי סוג מנוי</h1>
+        <p class="subtitle">Total Income by Membership Category</p>
+
+        <div class="revenue-hero">
+            <div class="revenue-label">סך הכנסות חודשיות</div>
+            <div class="revenue-main">₪79,910</div>
+            <div class="revenue-annual">הכנסה שנתית משוערת: ₪958,920</div>
+            <div class="revenue-annual">214 חברים פעילים</div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-container">
+                <canvas id="incomeChart"></canvas>
+            </div>
+
+            <div class="breakdown-section">
+                <h2>פירוט מפורט</h2>
+                
+                    <div class="category-card" style="border-left-color: #FF6384">
+                        <div class="category-name">Lift + Move</div>
+                        <div class="category-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">₪50,560</div>
+                                <div class="stat-label">הכנסה חודשית</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">133</div>
+                                <div class="stat-label">מספר חברים</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪380</div>
+                                <div class="stat-label">ממוצע לחבר</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪606,720</div>
+                                <div class="stat-label">הכנסה שנתית</div>
+                            </div>
+                        </div>
+                        <div class="percentage-badge">63.3% מסך ההכנסות</div>
+                        <div style="margin-top: 10px; color: #856404; font-size: 0.9em;">⚠️ 1 חברים עם תמחור משוער</div>
+                    </div>
+                    
+                    <div class="category-card" style="border-left-color: #36A2EB">
+                        <div class="category-name">Pilates</div>
+                        <div class="category-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">₪25,090</div>
+                                <div class="stat-label">הכנסה חודשית</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">59</div>
+                                <div class="stat-label">מספר חברים</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪425</div>
+                                <div class="stat-label">ממוצע לחבר</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪301,080</div>
+                                <div class="stat-label">הכנסה שנתית</div>
+                            </div>
+                        </div>
+                        <div class="percentage-badge">31.4% מסך ההכנסות</div>
+                        
+                    </div>
+                    
+                    <div class="category-card" style="border-left-color: #FFCE56">
+                        <div class="category-name">Teens</div>
+                        <div class="category-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">₪3,200</div>
+                                <div class="stat-label">הכנסה חודשית</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">16</div>
+                                <div class="stat-label">מספר חברים</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪200</div>
+                                <div class="stat-label">ממוצע לחבר</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪38,400</div>
+                                <div class="stat-label">הכנסה שנתית</div>
+                            </div>
+                        </div>
+                        <div class="percentage-badge">4.0% מסך ההכנסות</div>
+                        <div style="margin-top: 10px; color: #856404; font-size: 0.9em;">⚠️ 16 חברים עם תמחור משוער</div>
+                    </div>
+                    
+                    <div class="category-card" style="border-left-color: #4BC0C0">
+                        <div class="category-name">Open Gym</div>
+                        <div class="category-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">₪600</div>
+                                <div class="stat-label">הכנסה חודשית</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">4</div>
+                                <div class="stat-label">מספר חברים</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪150</div>
+                                <div class="stat-label">ממוצע לחבר</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪7,200</div>
+                                <div class="stat-label">הכנסה שנתית</div>
+                            </div>
+                        </div>
+                        <div class="percentage-badge">0.8% מסך ההכנסות</div>
+                        <div style="margin-top: 10px; color: #856404; font-size: 0.9em;">⚠️ 4 חברים עם תמחור משוער</div>
+                    </div>
+                    
+                    <div class="category-card" style="border-left-color: #9966FF">
+                        <div class="category-name">Yoga</div>
+                        <div class="category-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">₪460</div>
+                                <div class="stat-label">הכנסה חודשית</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">2</div>
+                                <div class="stat-label">מספר חברים</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪230</div>
+                                <div class="stat-label">ממוצע לחבר</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">₪5,520</div>
+                                <div class="stat-label">הכנסה שנתית</div>
+                            </div>
+                        </div>
+                        <div class="percentage-badge">0.6% מסך ההכנסות</div>
+                        
+                    </div>
+                    
+            </div>
+        </div>
+
+        <div class="footer">
+            Generated on 14.11.2025, 18:00:44 | Based on Arbox membership data<br>
+            <em style="color: #999; font-size: 0.9em;">Revenue includes both actual pricing and estimates for special memberships</em>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('incomeChart').getContext('2d');
+
+        const data = {
+            labels: ["Lift + Move","Pilates","Teens","Open Gym","Yoga"],
+            datasets: [{
+                label: 'Monthly Income',
+                data: [50560,25090,3200,600,460],
+                backgroundColor: ["#FF6384","#36A2EB","#FFCE56","#4BC0C0","#9966FF"],
+                borderWidth: 4,
+                borderColor: '#fff'
+            }]
+        };
+
+        const config = {
+            type: 'pie',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 16,
+                                family: 'Arial'
+                            },
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map((label, i) => {
+                                        const value = data.datasets[0].data[i];
+                                        const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return {
+                                            text: label + ' (' + percentage + '%)',
+                                            fillStyle: data.datasets[0].backgroundColor[i],
+                                            hidden: false,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const members = [133,59,16,4,2][context.dataIndex];
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return [
+                                    label,
+                                    'הכנסה: ₪' + value.toLocaleString('he-IL'),
+                                    'חברים: ' + members,
+                                    'אחוז: ' + percentage + '%'
+                                ];
+                            }
+                        },
+                        titleFont: {
+                            size: 18
+                        },
+                        bodyFont: {
+                            size: 16
+                        },
+                        padding: 15,
+                        displayColors: true,
+                        boxWidth: 15,
+                        boxHeight: 15
+                    }
+                }
+            }
+        };
+
+        new Chart(ctx, config);
+    </script>
+</body>
+</html>

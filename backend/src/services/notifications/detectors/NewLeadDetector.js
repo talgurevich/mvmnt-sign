@@ -62,6 +62,20 @@ class NewLeadDetector extends BaseDetector {
     const previousLeadIds = previousState?.stateData?.leadIds || [];
     const currentLeadIds = currentLeads.map(l => l.id);
 
+    // FIRST RUN: If no previous state, just initialize without notifications
+    if (!previousState || previousLeadIds.length === 0) {
+      console.log(`[${this.eventType}] First run - initializing state with ${currentLeadIds.length} existing leads (no notifications)`);
+
+      await this.stateManager.saveState(
+        this.eventType,
+        'all_leads',
+        entityKey,
+        { leadIds: currentLeadIds, lastChecked: new Date().toISOString() }
+      );
+
+      return notifications;
+    }
+
     // Find new leads (IDs that weren't in previous state)
     const newLeadIds = currentLeadIds.filter(id => !previousLeadIds.includes(id));
 
@@ -72,7 +86,7 @@ class NewLeadDetector extends BaseDetector {
 
       console.log(`[${this.eventType}] Detected ${newLeads.length} new lead(s)`);
 
-      // Create a notification for all new leads
+      // Create a notification for new leads
       notifications.push({
         type: 'new_lead',
         eventType: this.eventType,
