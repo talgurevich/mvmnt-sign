@@ -10,6 +10,7 @@ const BirthdayDetector = require('./detectors/BirthdayDetector');
 const NewLeadDetector = require('./detectors/NewLeadDetector');
 const TrialDetector = require('./detectors/TrialDetector');
 const EmailChannel = require('./channels/EmailChannel');
+const WhatsAppChannel = require('./channels/WhatsAppChannel');
 
 class NotificationOrchestrator {
   constructor() {
@@ -25,7 +26,8 @@ class NotificationOrchestrator {
 
     // Register channels
     this.channels = {
-      email: new EmailChannel()
+      email: new EmailChannel(),
+      whatsapp: new WhatsAppChannel()
     };
   }
 
@@ -174,6 +176,11 @@ class NotificationOrchestrator {
     // Use email if available
     if (recipient.email) {
       channels.push('email');
+    }
+
+    // Use WhatsApp if phone is available
+    if (recipient.phone) {
+      channels.push('whatsapp');
     }
 
     return channels;
