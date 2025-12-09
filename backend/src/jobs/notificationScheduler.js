@@ -8,6 +8,9 @@
 
 require('dotenv').config();
 const NotificationOrchestrator = require('../services/notifications/NotificationOrchestrator');
+const { isAutomationEnabled, updateLastRun } = require('../controllers/automationsController');
+
+const AUTOMATION_ID = 'waitlist_capacity_notifications';
 
 async function runScheduledJob() {
   console.log('='.repeat(60));
@@ -16,10 +19,24 @@ async function runScheduledJob() {
   console.log(`Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
   console.log('='.repeat(60));
 
+  // Check if automation is enabled
+  const enabled = await isAutomationEnabled(AUTOMATION_ID);
+
+  if (!enabled) {
+    console.log('\n[Scheduler] Automation is DISABLED - skipping');
+    console.log('='.repeat(60));
+    process.exit(0);
+  }
+
+  console.log('[Scheduler] Automation is ENABLED - running...\n');
+
   const orchestrator = new NotificationOrchestrator();
 
   try {
     const result = await orchestrator.run();
+
+    // Update last run timestamp
+    await updateLastRun(AUTOMATION_ID);
 
     console.log('\n' + '='.repeat(60));
     console.log('Job completed successfully');

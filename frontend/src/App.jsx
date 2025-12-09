@@ -30,6 +30,7 @@ import Analytics from './pages/Analytics'
 import Finance from './pages/Finance'
 import Leads from './pages/Leads'
 import WaitingList from './pages/WaitingList'
+import Automations from './pages/Automations'
 
 function App() {
   return (
@@ -105,6 +106,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <WaitingList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/automations"
+                element={
+                  <ProtectedRoute>
+                    <Automations />
                   </ProtectedRoute>
                 }
               />
