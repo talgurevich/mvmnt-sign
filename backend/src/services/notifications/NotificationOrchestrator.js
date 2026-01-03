@@ -9,26 +9,39 @@ const WaitlistCapacityDetector = require('./detectors/WaitlistCapacityDetector')
 const BirthdayDetector = require('./detectors/BirthdayDetector');
 const NewLeadDetector = require('./detectors/NewLeadDetector');
 const TrialDetector = require('./detectors/TrialDetector');
+const MembershipExpiryDetector = require('./detectors/MembershipExpiryDetector');
+const NewMembershipDetector = require('./detectors/NewMembershipDetector');
 const EmailChannel = require('./channels/EmailChannel');
 const WhatsAppChannel = require('./channels/WhatsAppChannel');
+const GreenApiChannel = require('./channels/GreenApiChannel');
 
 class NotificationOrchestrator {
   constructor() {
     this.stateManager = new StateManager();
+    this.slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 
     // Register detectors
     this.detectors = {
       waitlist_capacity: new WaitlistCapacityDetector(this.stateManager),
       birthday_notifications: new BirthdayDetector(this.stateManager),
       new_lead_notifications: new NewLeadDetector(this.stateManager),
-      trial_notifications: new TrialDetector(this.stateManager)
+      trial_notifications: new TrialDetector(this.stateManager),
+      membership_expiry_notifications: new MembershipExpiryDetector(this.stateManager),
+      new_membership_notifications: new NewMembershipDetector(this.stateManager)
     };
 
     // Register channels
+    // Use Green API for WhatsApp if configured, otherwise fall back to Twilio
+    const whatsappChannel = process.env.GREEN_API_INSTANCE_ID
+      ? new GreenApiChannel()
+      : new WhatsAppChannel();
+
     this.channels = {
       email: new EmailChannel(),
-      whatsapp: new WhatsAppChannel()
+      whatsapp: whatsappChannel
     };
+
+    console.log(`[Orchestrator] WhatsApp provider: ${process.env.GREEN_API_INSTANCE_ID ? 'Green API' : 'Twilio'}`);
   }
 
   /**
@@ -134,7 +147,13 @@ class NotificationOrchestrator {
             sent_at: result.success ? new Date().toISOString() : null
           });
 
-          if (result.success) sentCount++;
+          if (result.success) {
+            sentCount++;
+            // Send Slack notification
+            this.sendSlackNotification(notification, channelName, recipient).catch(err => {
+              console.error('[Orchestrator] Slack notification failed:', err.message);
+            });
+          }
 
         } catch (error) {
           console.error(`[Orchestrator] Failed to send via ${channelName}:`, error.message);
@@ -267,6 +286,89 @@ class NotificationOrchestrator {
 
     if (error) {
       console.error('[Orchestrator] Error completing job run:', error);
+    }
+  }
+
+  /**
+   * Send Slack notification about sent message
+   */
+  async sendSlackNotification(notification, channel, recipient) {
+    if (!this.slackWebhookUrl) return;
+
+    const typeLabels = {
+      'waitlist_spot_available': '✅ מקום פנוי',
+      'birthday_today': '🎂 יום הולדת',
+      'new_lead': '🆕 ליד חדש',
+      'new_trial': '🏋️ אימון ניסיון',
+      'trial_reminder': '⏰ תזכורת אימון',
+      'membership_expiring': '⚠️ מנוי עומד לפוג',
+      'new_membership': '🎉 מנוי חדש',
+      'document_signed': '✍️ מסמך נחתם',
+      'new_order': '🛍️ הזמנה חדשה'
+    };
+
+    const channelEmoji = channel === 'whatsapp' ? '📱' : '📧';
+    const typeLabel = typeLabels[notification.type] || notification.type;
+    const recipientInfo = channel === 'whatsapp' ? recipient.phone : recipient.email;
+
+    // Build a summary from notification data
+    let summary = '';
+    const { data } = notification;
+
+    if (notification.type === 'document_signed') {
+      summary = `${data.customerName} - ${data.templateName}`;
+    } else if (notification.type === 'birthday_today') {
+      summary = `${data.birthdayCount} חוגגים`;
+    } else if (notification.type === 'new_lead') {
+      summary = data.leads?.[0]?.fullName || '';
+    } else if (notification.type === 'new_trial' || notification.type === 'trial_reminder') {
+      summary = data.trials?.[0]?.fullName || '';
+    } else if (notification.type === 'membership_expiring') {
+      summary = data.members?.[0]?.fullName || '';
+    } else if (notification.type === 'new_membership') {
+      summary = data.members?.[0]?.fullName || '';
+    } else if (notification.type === 'waitlist_spot_available') {
+      summary = `${data.eventName} - ${data.availableSpots} מקומות`;
+    } else if (notification.type === 'new_order') {
+      summary = `${data.customerName} - ${data.itemsCount} פריטים - ${data.totalAmount}₪`;
+    }
+
+    const slackMessage = {
+      text: `${channelEmoji} ${typeLabel}`,
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `${channelEmoji} *${typeLabel}*\n${summary}`
+          }
+        },
+        {
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `נשלח ל: ${recipientInfo} | ${new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}`
+            }
+          ]
+        }
+      ]
+    };
+
+    try {
+      const response = await fetch(this.slackWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slackMessage)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Slack returned ${response.status}`);
+      }
+
+      console.log('[Orchestrator] Slack notification sent');
+    } catch (error) {
+      console.error('[Orchestrator] Slack error:', error.message);
     }
   }
 }

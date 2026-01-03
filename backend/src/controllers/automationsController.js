@@ -5,6 +5,7 @@
 
 const { supabaseAdmin } = require('../config/supabase');
 const { catchAsync } = require('../middleware/errorHandler');
+const arboxService = require('../services/arboxService');
 
 /**
  * Get all automation settings
@@ -166,3 +167,128 @@ exports.updateLastRun = async (automationId) => {
     })
     .eq('id', automationId);
 };
+
+/**
+ * Get expiring memberships
+ * GET /api/automations/membership-expiry/members
+ */
+exports.getExpiringMemberships = catchAsync(async (req, res) => {
+  const { days = 7 } = req.query;
+  const windowDays = parseInt(days, 10) || 7;
+
+  // Fetch all users from Arbox
+  const users = await arboxService.getUsers();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const windowEnd = new Date(today);
+  windowEnd.setDate(windowEnd.getDate() + windowDays);
+
+  // Filter users with expiring memberships
+  const expiringMembers = users
+    .filter(user => {
+      if (!user.end) return false;
+      const endDate = new Date(user.end);
+      endDate.setHours(0, 0, 0, 0);
+      return endDate >= today && endDate <= windowEnd;
+    })
+    .map(user => {
+      const endDate = new Date(user.end);
+      endDate.setHours(0, 0, 0, 0);
+      const diffTime = endDate.getTime() - today.getTime();
+      const daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      return {
+        id: user.id,
+        userFk: user.user_fk,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        phone: user.phone || '',
+        email: user.email || '',
+        membershipType: user.membership_type_name || '',
+        membershipEnd: user.end,
+        daysUntilExpiry,
+        formattedEndDate: new Date(user.end).toLocaleDateString('he-IL', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      };
+    })
+    .sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+
+  res.json({
+    success: true,
+    data: {
+      members: expiringMembers,
+      count: expiringMembers.length,
+      windowDays
+    }
+  });
+});
+
+/**
+ * Get new memberships (started in last X days)
+ * GET /api/automations/new-memberships/members
+ */
+exports.getNewMemberships = catchAsync(async (req, res) => {
+  const { days = 7 } = req.query;
+  const lookbackDays = parseInt(days, 10) || 7;
+
+  // Fetch all users from Arbox
+  const users = await arboxService.getUsers();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const lookbackDate = new Date(today);
+  lookbackDate.setDate(lookbackDate.getDate() - lookbackDays);
+
+  // Filter users with new memberships (started within lookback window)
+  const newMembers = users
+    .filter(user => {
+      if (!user.start || !user.membership_type_name) return false;
+      const startDate = new Date(user.start);
+      startDate.setHours(0, 0, 0, 0);
+      return startDate >= lookbackDate && startDate <= today;
+    })
+    .map(user => {
+      const startDate = new Date(user.start);
+      startDate.setHours(0, 0, 0, 0);
+      const diffTime = today.getTime() - startDate.getTime();
+      const daysSinceStart = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      return {
+        id: user.id,
+        userFk: user.user_fk,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        phone: user.phone || '',
+        email: user.email || '',
+        membershipType: user.membership_type_name || '',
+        membershipStart: user.start,
+        membershipEnd: user.end,
+        daysSinceStart,
+        formattedStartDate: new Date(user.start).toLocaleDateString('he-IL', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      };
+    })
+    .sort((a, b) => new Date(b.membershipStart) - new Date(a.membershipStart)); // Most recent first
+
+  res.json({
+    success: true,
+    data: {
+      members: newMembers,
+      count: newMembers.length,
+      lookbackDays
+    }
+  });
+});

@@ -15,7 +15,9 @@ const AUTOMATION_DETECTORS = {
   'waitlist_capacity_notifications': 'waitlist_capacity',
   'birthday_notifications': 'birthday_notifications',
   'new_lead_notifications': 'new_lead_notifications',
-  'trial_notifications': 'trial_notifications'
+  'trial_notifications': 'trial_notifications',
+  'membership_expiry_notifications': 'membership_expiry_notifications',
+  'new_membership_notifications': 'new_membership_notifications'
 };
 
 async function runScheduledJob() {

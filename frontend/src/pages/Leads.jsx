@@ -31,6 +31,7 @@ import {
 } from '@mui/material';
 import { Pie, Bar } from 'react-chartjs-2';
 import Layout from '../components/Layout';
+import RecentNotifications from '../components/RecentNotifications';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import SearchIcon from '@mui/icons-material/Search';
@@ -86,9 +87,22 @@ const Leads = () => {
     }
   };
 
-  // Filter leads based on search and filters
-  const filteredLeads = useMemo(() => {
+  // Filter leads from last 7 days
+  const recentLeads = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
     return leads.filter(lead => {
+      if (!lead.created_at) return false;
+      const createdDate = new Date(lead.created_at);
+      return createdDate >= sevenDaysAgo;
+    });
+  }, [leads]);
+
+  // Filter leads based on search and filters (from recent leads only)
+  const filteredLeads = useMemo(() => {
+    return recentLeads.filter(lead => {
       const matchesSearch = !searchQuery ||
         (lead.first_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (lead.last_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -100,23 +114,23 @@ const Leads = () => {
 
       return matchesSearch && matchesStatus && matchesSource;
     });
-  }, [leads, searchQuery, statusFilter, sourceFilter]);
+  }, [recentLeads, searchQuery, statusFilter, sourceFilter]);
 
-  // Get unique statuses and sources for filter dropdowns
+  // Get unique statuses and sources for filter dropdowns (from recent leads)
   const uniqueStatuses = useMemo(() =>
-    [...new Set(leads.map(l => l.lead_status).filter(Boolean))].sort(),
-    [leads]
+    [...new Set(recentLeads.map(l => l.lead_status).filter(Boolean))].sort(),
+    [recentLeads]
   );
 
   const uniqueSources = useMemo(() =>
-    [...new Set(leads.map(l => l.lead_source).filter(Boolean))].sort(),
-    [leads]
+    [...new Set(recentLeads.map(l => l.lead_source).filter(Boolean))].sort(),
+    [recentLeads]
   );
 
-  // New/uncontacted leads
+  // New/uncontacted leads (from recent leads only)
   const newLeads = useMemo(() =>
-    leads.filter(l => l.lead_status === 'Not Contacted' || !l.lead_status),
-    [leads]
+    recentLeads.filter(l => l.lead_status === 'Not Contacted' || !l.lead_status),
+    [recentLeads]
   );
 
   const formatDate = (dateStr) => {
@@ -181,9 +195,14 @@ const Leads = () => {
     <Layout>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
-            לידים
-          </Typography>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 600 }}>
+              לידים חדשים
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              7 ימים אחרונים ({recentLeads.length} לידים)
+            </Typography>
+          </Box>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
@@ -289,8 +308,8 @@ const Leads = () => {
             variant="scrollable"
             scrollButtons="auto"
           >
-            <Tab label={`לידים חדשים (${newLeads.length})`} />
-            <Tab label={`כל הלידים (${leads.length})`} />
+            <Tab label={`ממתינים לטיפול (${newLeads.length})`} />
+            <Tab label={`כל הלידים (${recentLeads.length})`} />
             <Tab label="סטטיסטיקות" />
           </Tabs>
         </Paper>
@@ -610,6 +629,9 @@ const Leads = () => {
             </Grid>
           </Grid>
         )}
+
+        {/* Recent Notifications */}
+        <RecentNotifications eventType="new_lead_notifications" limit={5} />
       </Container>
     </Layout>
   );

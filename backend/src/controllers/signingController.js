@@ -4,6 +4,7 @@
 const { supabaseAdmin } = require('../config/supabase')
 const documentService = require('../services/documentService')
 const { catchAsync, AppError } = require('../middleware/errorHandler')
+const { sendDocumentSignedNotification } = require('../services/notifications')
 
 // Get form request details by token (public)
 exports.getFormRequestByToken = catchAsync(async (req, res) => {
@@ -70,12 +71,13 @@ exports.submitSignature = catchAsync(async (req, res) => {
     throw new AppError('חתימה היא שדה חובה', 400)
   }
 
-  // Get form request with template info
+  // Get form request with template and customer info
   const { data: formRequest, error: fetchError } = await supabaseAdmin
     .from('form_requests')
     .select(`
       *,
-      template:form_templates(file_url, original_filename)
+      template:form_templates(id, template_name, file_url, original_filename),
+      customer:customers(id, first_name, last_name, email, phone_number)
     `)
     .eq('signing_token', token)
     .single()
@@ -185,6 +187,23 @@ exports.submitSignature = catchAsync(async (req, res) => {
       signed_document_id: signedDocument?.id || null
     }
   })
+
+  // Send notification to admin about the signed document
+  const customerName = formRequest.customer
+    ? `${formRequest.customer.first_name || ''} ${formRequest.customer.last_name || ''}`.trim()
+    : 'לקוח לא ידוע';
+  const templateName = formRequest.template?.template_name || 'מסמך';
+  const signedAt = new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' });
+
+  // Fire and forget - don't block response for notification
+  sendDocumentSignedNotification({
+    customerName,
+    templateName,
+    signerName: signer_name,
+    signedAt,
+    signedDocumentUrl: signedDocUrl,
+    formRequestId: formRequest.id
+  }).catch(err => console.error('[SigningController] Notification error:', err));
 
   res.json({
     message: 'המסמך נחתם בהצלחה',

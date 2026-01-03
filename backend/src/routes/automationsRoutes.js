@@ -14,6 +14,12 @@ router.use(requireAuth);
 // Get all automations
 router.get('/', automationsController.getAutomations);
 
+// Get expiring memberships
+router.get('/membership-expiry/members', automationsController.getExpiringMemberships);
+
+// Get new memberships
+router.get('/new-memberships/members', automationsController.getNewMemberships);
+
 // Get single automation
 router.get('/:id', automationsController.getAutomation);
 

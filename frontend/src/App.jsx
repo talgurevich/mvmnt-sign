@@ -33,6 +33,10 @@ import WaitingList from './pages/WaitingList'
 import Automations from './pages/Automations'
 import Birthdays from './pages/Birthdays'
 import Trials from './pages/Trials'
+import ExpiringMemberships from './pages/ExpiringMemberships'
+import NewMemberships from './pages/NewMemberships'
+import Shop from './pages/Shop'
+import Orders from './pages/Orders'
 
 function App() {
   return (
@@ -45,6 +49,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/sign/:token" element={<SignDocument />} />
+              <Route path="/shop" element={<Shop />} />
 
               {/* Protected Routes */}
               <Route
@@ -132,6 +137,30 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Trials />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/expiring-memberships"
+                element={
+                  <ProtectedRoute>
+                    <ExpiringMemberships />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/new-memberships"
+                element={
+                  <ProtectedRoute>
+                    <NewMemberships />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  <ProtectedRoute>
+                    <Orders />
                   </ProtectedRoute>
                 }
               />

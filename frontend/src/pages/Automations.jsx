@@ -26,6 +26,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import CakeIcon from '@mui/icons-material/Cake';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import CardMembershipIcon from '@mui/icons-material/CardMembership';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -121,6 +122,8 @@ const Automations = () => {
         return <PersonAddIcon />;
       case 'trial_notifications':
         return <FitnessCenterIcon />;
+      case 'membership_expiry_notifications':
+        return <CardMembershipIcon />;
       default:
         return <SmartToyIcon />;
     }

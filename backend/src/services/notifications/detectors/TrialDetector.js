@@ -71,8 +71,8 @@ class TrialDetector extends BaseDetector {
     const entityKey = 'all_trials';
     const previousState = await this.stateManager.getPreviousState(this.eventType, entityKey);
 
-    const previousTrialIds = previousState?.stateData?.trialIds || [];
-    const previousRemindersSent = previousState?.stateData?.remindersSent || [];
+    const previousTrialIds = previousState?.state_data?.trialIds || [];
+    const previousRemindersSent = previousState?.state_data?.remindersSent || [];
     const currentTrialIds = currentTrials.map(t => t.id);
 
     // FIRST RUN: If no previous state, just initialize without notifications for new trials

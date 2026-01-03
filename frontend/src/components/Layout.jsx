@@ -28,12 +28,16 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import SendIcon from '@mui/icons-material/Send'
 import AnalyticsIcon from '@mui/icons-material/Analytics'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
+import BarChartIcon from '@mui/icons-material/BarChart'
 import PersonAddIcon from '@mui/icons-material/PersonAdd'
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
 import CakeIcon from '@mui/icons-material/Cake'
 import DrawIcon from '@mui/icons-material/Draw'
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter'
+import CardMembershipIcon from '@mui/icons-material/CardMembership'
+import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt'
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -46,6 +50,7 @@ const Layout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [automationsOpen, setAutomationsOpen] = React.useState(true)
   const [signingOpen, setSigningOpen] = React.useState(true)
+  const [statsOpen, setStatsOpen] = React.useState(true)
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -57,15 +62,19 @@ const Layout = ({ children }) => {
   }
 
   // Check if current path is in automations section
-  const isAutomationsPath = ['/leads', '/waitlist', '/birthdays', '/trials', '/automations'].includes(location.pathname)
+  const isAutomationsPath = ['/leads', '/waitlist', '/birthdays', '/trials', '/automations', '/expiring-memberships', '/new-memberships'].includes(location.pathname)
   // Check if current path is in signing section
   const isSigningPath = ['/send-document', '/forms', '/customers'].includes(location.pathname)
+  // Check if current path is in stats section
+  const isStatsPath = ['/analytics', '/finance'].includes(location.pathname)
 
   const automationsSubItems = [
     { text: 'לידים', icon: <PersonAddIcon />, path: '/leads' },
     { text: 'רשימת המתנה', icon: <HourglassEmptyIcon />, path: '/waitlist' },
     { text: 'ימי הולדת', icon: <CakeIcon />, path: '/birthdays' },
     { text: 'אימוני ניסיון', icon: <FitnessCenterIcon />, path: '/trials' },
+    { text: 'סיום מנויים', icon: <CardMembershipIcon />, path: '/expiring-memberships' },
+    { text: 'מנויים חדשים', icon: <PersonAddAltIcon />, path: '/new-memberships' },
     { text: 'הגדרות', icon: <SettingsIcon />, path: '/automations' }
   ]
 
@@ -73,6 +82,11 @@ const Layout = ({ children }) => {
     { text: 'שלח מסמך', icon: <SendIcon />, path: '/send-document' },
     { text: 'טפסים', icon: <DescriptionIcon />, path: '/forms' },
     { text: 'לקוחות', icon: <PeopleIcon />, path: '/customers' }
+  ]
+
+  const statsSubItems = [
+    { text: 'ניתוח נתונים', icon: <AnalyticsIcon />, path: '/analytics' },
+    { text: 'דוח פיננסי', icon: <AccountBalanceIcon />, path: '/finance' }
   ]
 
   const drawer = (
@@ -181,35 +195,55 @@ const Layout = ({ children }) => {
           </List>
         </Collapse>
 
+        {/* Orders */}
+        <ListItem disablePadding>
+          <ListItemButton
+            selected={location.pathname === '/orders'}
+            onClick={() => {
+              navigate('/orders')
+              setMobileOpen(false)
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}><ShoppingBagIcon /></ListItemIcon>
+            <ListItemText primary="הזמנות" />
+          </ListItemButton>
+        </ListItem>
+
         <Divider sx={{ my: 1 }} />
 
-        {/* Analytics */}
+        {/* Stats Section - Expandable */}
         <ListItem disablePadding>
           <ListItemButton
-            selected={location.pathname === '/analytics'}
-            onClick={() => {
-              navigate('/analytics')
-              setMobileOpen(false)
+            onClick={() => setStatsOpen(!statsOpen)}
+            selected={isStatsPath}
+            sx={{
+              bgcolor: isStatsPath ? 'action.selected' : 'inherit'
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}><AnalyticsIcon /></ListItemIcon>
-            <ListItemText primary="ניתוח נתונים" />
+            <ListItemIcon sx={{ minWidth: 40 }}><BarChartIcon /></ListItemIcon>
+            <ListItemText primary="נתונים" />
+            {statsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
         </ListItem>
-
-        {/* Finance */}
-        <ListItem disablePadding>
-          <ListItemButton
-            selected={location.pathname === '/finance'}
-            onClick={() => {
-              navigate('/finance')
-              setMobileOpen(false)
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}><AccountBalanceIcon /></ListItemIcon>
-            <ListItemText primary="דוח פיננסי" />
-          </ListItemButton>
-        </ListItem>
+        <Collapse in={statsOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {statsSubItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => {
+                    navigate(item.path)
+                    setMobileOpen(false)
+                  }}
+                  sx={{ pr: 4 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mr: 1 }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Collapse>
       </List>
     </Box>
   )

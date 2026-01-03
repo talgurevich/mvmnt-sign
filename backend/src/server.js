@@ -135,6 +135,12 @@ app.use('/api/trials', require('./routes/trialsRoutes'));
 // Public signing routes (no authentication required)
 app.use('/api/sign', require('./routes/signingRoutes'));
 
+// Webhook routes (called by external services like Twilio)
+app.use('/webhooks', require('./routes/webhooksRoutes'));
+
+// Merchandise routes (shop and orders)
+app.use('/api/merchandise', require('./routes/merchandiseRoutes'));
+
 // Migration routes (temporary - can be removed after migrations complete)
 app.use('/api/migrations', require('./routes/migrationRoutes'));
 

@@ -60,14 +60,8 @@ const Finance = () => {
   const [tabValue, setTabValue] = useState(0);
   const [selectedPieMonth, setSelectedPieMonth] = useState('all');
 
-  // Filter transactions to only show July-November (exclude June and December)
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter(tx => {
-      if (!tx.transaction_date) return false;
-      const month = new Date(tx.transaction_date).getMonth() + 1; // 1-12
-      return month >= 7 && month <= 11; // July (7) through November (11)
-    });
-  }, [transactions]);
+  // Use all transactions (no month filtering)
+  const filteredTransactions = transactions;
 
   // Fetch existing transactions on mount
   useEffect(() => {

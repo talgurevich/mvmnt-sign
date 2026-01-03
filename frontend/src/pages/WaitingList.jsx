@@ -26,6 +26,7 @@ import {
   Badge
 } from '@mui/material';
 import Layout from '../components/Layout';
+import RecentNotifications from '../components/RecentNotifications';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -450,6 +451,9 @@ const WaitingList = () => {
             ))}
           </Paper>
         )}
+
+        {/* Recent Notifications */}
+        <RecentNotifications eventType="waitlist_capacity" limit={5} />
       </Container>
     </Layout>
   );

@@ -21,6 +21,7 @@ import {
   Button
 } from '@mui/material';
 import Layout from '../components/Layout';
+import RecentNotifications from '../components/RecentNotifications';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import CakeIcon from '@mui/icons-material/Cake';
@@ -333,6 +334,9 @@ const Birthdays = () => {
             </Typography>
           </Paper>
         )}
+
+        {/* Recent Notifications */}
+        <RecentNotifications eventType="birthday_notifications" limit={5} />
       </Container>
     </Layout>
   );

@@ -59,7 +59,7 @@ class NewLeadDetector extends BaseDetector {
     const entityKey = 'all_leads';
     const previousState = await this.stateManager.getPreviousState(this.eventType, entityKey);
 
-    const previousLeadIds = previousState?.stateData?.leadIds || [];
+    const previousLeadIds = previousState?.state_data?.leadIds || [];
     const currentLeadIds = currentLeads.map(l => l.id);
 
     // FIRST RUN: If no previous state, just initialize without notifications

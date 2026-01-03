@@ -84,7 +84,8 @@ class EmailChannel extends BaseChannel {
       'birthday_today': this.renderBirthdayToday.bind(this),
       'new_lead': this.renderNewLead.bind(this),
       'new_trial': this.renderNewTrial.bind(this),
-      'trial_reminder': this.renderTrialReminder.bind(this)
+      'trial_reminder': this.renderTrialReminder.bind(this),
+      'document_signed': this.renderDocumentSigned.bind(this)
     };
 
     const renderer = templates[notification.type];
@@ -644,6 +645,79 @@ ${trialsListText}
 ${trialsListText}
 
 💡 כדאי לשלוח הודעת תזכורת למתאמנים ולוודא שהם מגיעים!
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  /**
+   * Template: Document Signed
+   */
+  renderDocumentSigned(notification) {
+    const { data } = notification;
+
+    const subject = `✍️ מסמך נחתם! ${data.customerName} - ${data.templateName}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="he">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .header .emoji { font-size: 48px; margin-bottom: 10px; }
+          .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+          .details { background: #ECFDF5; padding: 20px; border-radius: 8px; margin: 15px 0; border-right: 4px solid #10B981; }
+          .details ul { margin: 10px 0; padding-right: 20px; list-style-type: none; }
+          .details li { margin: 8px 0; }
+          .details li strong { display: inline-block; min-width: 80px; }
+          .btn { display: inline-block; background: #10B981; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin-top: 15px; }
+          .footer { background: #f3f4f6; padding: 15px 20px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; font-size: 12px; color: #6B7280; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="emoji">✍️</div>
+            <h1>מסמך נחתם בהצלחה!</h1>
+          </div>
+          <div class="content">
+            <div class="details">
+              <ul>
+                <li><strong>לקוח:</strong> ${data.customerName}</li>
+                <li><strong>מסמך:</strong> ${data.templateName}</li>
+                <li><strong>חותם:</strong> ${data.signerName}</li>
+                <li><strong>תאריך:</strong> ${data.signedAt}</li>
+              </ul>
+            </div>
+
+            ${data.signedDocumentUrl ? `
+            <p style="text-align: center; margin-top: 20px;">
+              <a href="${data.signedDocumentUrl}" class="btn" target="_blank">
+                צפייה במסמך החתום
+              </a>
+            </p>
+            ` : ''}
+          </div>
+          <div class="footer">
+            <p>הודעה זו נשלחה אוטומטית ממערכת החתמת המסמכים.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+✍️ מסמך נחתם בהצלחה!
+
+לקוח: ${data.customerName}
+מסמך: ${data.templateName}
+חותם: ${data.signerName}
+תאריך: ${data.signedAt}
+${data.signedDocumentUrl ? `\nקישור למסמך: ${data.signedDocumentUrl}` : ''}
     `.trim();
 
     return { subject, html, text };
